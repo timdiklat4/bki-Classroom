@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bki Classroom</title>
+    <link rel="icon" type="image/png" href="https://docs.google.com/uc?export=view&id=1-MlYRfiNuuZfw3gjELOmlLrnkTCRYFAw">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+    <style>
+        .custom-scroll::-webkit-scrollbar{width:5px}
+        .custom-scroll::-webkit-scrollbar-track{background:transparent}
+        .custom-scroll::-webkit-scrollbar-thumb{background:#c7d2fe;border-radius:10px}
+        .custom-scroll::-webkit-scrollbar-thumb:hover{background:#a5b4fc}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        .animate-fade-in{animation:fadeIn .3s ease-out}
+        .toggle-eye{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;transition:all .2s;font-size:12px}
+        .toggle-eye:hover{transform:scale(1.15)}
+        .toggle-eye.show{background:rgba(34,197,94,.1);color:#16a34a;border:1px solid rgba(34,197,94,.2)}
+        .toggle-eye.hide{background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.2)}
+        .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:none;align-items:center;justify-content:center;padding:1rem;overflow-y:auto}
+        .session-card{border:2px solid #e0e7ff;border-radius:16px;overflow:hidden;background:#fff;transition:all .2s}
+        .session-card:hover{box-shadow:0 4px 12px rgba(99,102,241,.08)}
+        .sesi-header{background:#eef2ff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e0e7ff}
+        .sesi-complete{border-left:4px solid #22c55e;background:linear-gradient(135deg,rgba(34,197,94,.04),rgba(34,197,94,.01))}
+        .sesi-pending{border-left:4px solid #e5e7eb;background:#fff}
+        .upload-zone{position:relative;width:100%;height:112px;border:2px dashed #c7d2fe;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(238,242,255,.3);cursor:pointer;overflow:hidden}
+        .upload-zone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;z-index:20}
+        .upload-zone img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:10}
+        .upload-zone .placeholder{z-index:5;text-align:center;pointer-events:none}
+        .upload-zone .placeholder.hidden{display:none}
+        @keyframes float1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-20px) scale(1.1)}}
+        @keyframes float2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-20px,30px) scale(1.05)}}
+        @keyframes float3{0%,100%{transform:translate(0,0)}50%{transform:translate(15px,15px)}}
+        .login-orb-1{animation:float1 8s ease-in-out infinite}
+        .login-orb-2{animation:float2 10s ease-in-out infinite}
+        .login-orb-3{animation:float3 6s ease-in-out infinite}
+        .login-input:focus{border-color:#4f46e5;box-shadow:0 0 0 3px rgba(79,70,229,.15)}
+        @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+        .shake{animation:shake .4s ease-in-out}
+        @keyframes pulse-ring{0%{transform:scale(.8);opacity:.5}100%{transform:scale(1.4);opacity:0}}
+        .login-logo-ring{animation:pulse-ring 2s ease-out infinite}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+        .timer-blink{animation:blink 1.5s ease-in-out infinite}
+        .pin-dot{width:16px;height:16px;border-radius:50%;border:2px solid #c7d2fe;transition:all .2s}
+        .pin-dot.filled{background:#4f46e5;border-color:#4f46e5;transform:scale(1.15)}
+        .pin-dot.error{background:#ef4444;border-color:#ef4444;animation:shake .4s ease-in-out}
+        .pin-input-hidden{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
+        .card-gradient{background:linear-gradient(to top,rgba(0,0,0,.9) 0%,rgba(0,0,0,.3) 60%,rgba(0,0,0,0) 100%)}
+
+        /* ===== SIDEBAR STYLES ===== */
+        .sidebar{width:260px;position:fixed;left:0;top:56px;bottom:0;background:#fff;border-right:1px solid #e5e7eb;z-index:40;display:flex;flex-direction:column;transition:transform .3s cubic-bezier(.4,0,.2,1)}
+        .sidebar-nav-item{display:flex;align-items:center;gap:12px;padding:10px 24px;cursor:pointer;transition:all .15s;border-left:4px solid transparent;color:#5f6368;font-size:13px;font-weight:500;user-select:none}
+        .sidebar-nav-item:hover{background:#f1f3f4;color:#202124}
+        .sidebar-nav-item.active{background:#e8f0fe;color:#1a73e8;border-left-color:#1a73e8;font-weight:700}
+        .sidebar-nav-item i{width:20px;text-align:center;font-size:14px}
+        .sidebar-section-title{padding:16px 24px 6px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#9aa0a6;user-select:none}
+        .sidebar-folder-item{display:flex;align-items:center;gap:12px;padding:9px 24px;cursor:pointer;transition:all .15s;border-left:4px solid transparent;position:relative}
+        .sidebar-folder-item:hover{background:#f8f9fa}
+        .sidebar-folder-item.active{background:#f8f9fa}
+        .sidebar-folder-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+        .sidebar-folder-name{font-size:13px;font-weight:500;color:#3c4043;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .sidebar-folder-count{font-size:11px;color:#9aa0a6;font-weight:600;flex-shrink:0}
+        .sidebar-divider{height:1px;background:#e5e7eb;margin:8px 16px}
+        .sidebar-footer{margin-top:auto;padding:12px 16px;border-top:1px solid #e5e7eb}
+        .sidebar-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:39;display:none}
+        .main-area{margin-left:260px;min-height:calc(100vh - 56px);transition:margin .3s}
+
+        /* Mobile */
+        @media(max-width:768px){
+            .sidebar{transform:translateX(-100%);z-index:45;top:0;bottom:0}
+            .sidebar.open{transform:translateX(0)}
+            .sidebar-backdrop.open{display:block;z-index:44}
+            .main-area{margin-left:0}
+        }
+
+        .badge-sdp{background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc}
+        .badge-umum{background:#fef3c7;color:#92400e;border:1px solid #fcd34d}
+        .badge-trainer{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+        .badge-semua{background:#f3f4f6;color:#374151;border:1px solid #d1d5db}
+        .banner-sdp{background:linear-gradient(135deg,#e0f2fe 0%,#f0f9ff 100%);border:2px solid #7dd3fc;color:#0369a1}
+        .banner-umum{background:linear-gradient(135deg,#fef3c7 0%,#fffbeb 100%);border:2px solid #fcd34d;color:#92400e}
+    </style>
+</head>
+<body class="bg-gray-100 font-sans text-gray-900">
+
+<!-- ==================== LOGIN OVERLAY ==================== -->
+<div id="login-overlay" class="fixed inset-0 z-[100] flex items-center justify-center" style="display:none; background: linear-gradient(135deg, #0f0a2e 0%, #1e1b4b 25%, #312e81 50%, #3730a3 75%, #4338ca 100%);">
+    <div class="login-orb-1 absolute top-[-8%] right-[-4%] w-[420px] h-[420px] rounded-full" style="background:radial-gradient(circle,rgba(129,140,248,.15),transparent 70%)"></div>
+    <div class="login-orb-2 absolute bottom-[-12%] left-[-6%] w-[380px] h-[380px] rounded-full" style="background:radial-gradient(circle,rgba(167,139,250,.12),transparent 70%)"></div>
+    <div class="login-orb-3 absolute top-[40%] left-[10%] w-[200px] h-[200px] rounded-full" style="background:radial-gradient(circle,rgba(99,102,241,.1),transparent 70%)"></div>
+    <div class="absolute inset-0 opacity-[0.03]" style="background-image:linear-gradient(rgba(255,255,255,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.5) 1px,transparent 1px);background-size:60px 60px"></div>
+    <div class="relative bg-white/[0.97] backdrop-blur-xl w-full max-w-md mx-4 rounded-3xl p-8 shadow-2xl animate-fade-in border border-white/20">
+        <div class="text-center mb-8">
+            <div class="relative inline-block mb-4">
+                <div class="login-logo-ring absolute inset-0 w-20 h-20 mx-auto rounded-2xl bg-indigo-100"></div>
+                <div class="relative w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/30">
+                    <i class="fas fa-graduation-cap text-white text-3xl"></i>
+                </div>
+            </div>
+            <h1 class="text-2xl font-black text-gray-900 uppercase tracking-tight">bki Classroom</h1>
+            <p class="text-[10px] font-bold text-indigo-400 tracking-[0.15em] uppercase mt-1">by.hc diklat ppsdm</p>
+            <div class="w-12 h-0.5 bg-gradient-to-r from-indigo-400 to-purple-400 mx-auto mt-4 rounded-full"></div>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">NUP Pegawai</label>
+                <div class="relative">
+                    <i class="fas fa-id-badge absolute left-4 top-1/2 -translate-y-1/2 text-indigo-300 text-sm"></i>
+                    <input id="login-nup" type="text" placeholder="Masukkan NUP Anda" autocomplete="off" class="login-input w-full border-2 border-gray-200 rounded-xl pl-11 pr-5 py-4 outline-none bg-gray-50/80 font-black text-sm text-center uppercase tracking-[0.2em] transition-all" onkeyup="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')doLogin()">
+                </div>
+            </div>
+            <p id="login-error" class="text-xs text-red-500 text-center font-bold h-4 transition-all"></p>
+            <button id="btn-login" onclick="doLogin()" type="button" class="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 text-white py-4 rounded-xl font-bold shadow-lg shadow-indigo-500/25 uppercase text-sm flex items-center justify-center gap-2 hover:from-indigo-700 hover:to-indigo-800 transition-all active:scale-[0.98]">
+                <i class="fas fa-sign-in-alt"></i> Masuk
+            </button>
+        </div>
+        <div class="mt-6 pt-5 border-t border-gray-100">
+            <div class="flex items-center justify-center gap-2 text-gray-400 text-[10px]">
+                <i class="fas fa-shield-alt text-indigo-300"></i>
+                <span>Login sekali untuk mengakses semua materi pelatihan</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== MODAL PIN TRAINER ==================== -->
+<div id="modal-pin-trainer" class="modal-overlay" style="z-index:300">
+    <div class="bg-white w-full max-w-sm mx-4 rounded-3xl p-8 shadow-2xl animate-fade-in my-8">
+        <div class="text-center mb-6">
+            <div class="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border-2 border-red-100"><i class="fas fa-lock text-red-500 text-2xl"></i></div>
+            <h3 class="font-black text-xl text-gray-900 uppercase tracking-tight">Akses Terbatas</h3>
+            <p class="text-xs text-gray-400 mt-2">Menu ini khusus untuk Trainer. Masukkan PIN.</p>
+        </div>
+        <div class="flex justify-center gap-3 mb-4" id="pin-dots">
+            <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+        </div>
+        <div class="relative mb-4">
+            <input id="pin-input" type="password" maxlength="6" class="pin-input-hidden" autocomplete="off" oninput="onPinInput(this)" onkeydown="if(event.key==='Backspace'){setTimeout(function(){onPinInput(document.getElementById('pin-input'))},10)}">
+            <div class="flex justify-center gap-2">
+                <button onclick="pinKeypad('1')" type="button" class="w-12 h-12 rounded-xl bg-gray-50 hover:bg-indigo-50 text-gray-700 font-bold text-lg border border-gray-200 hover:border-indigo-300 transition-all active:scale-95">1</button>
+                <button onclick="pinKeypad('2')" type="button" class="w-12 h-12 rounded-xl bg-gray-50 hover:bg-indigo-50 text-gray-700 font-bold text-lg border border-gray-200 hover:border-indigo-300 transition-all active:scale-95">2</button>
+                <button onclick="pinKeypad('3')" type="button" class="w-12 h-12 rounded-xl bg-gray-50 hover:bg-indigo-50 text-gray-700 font-bold text-lg border border-gray-200 hover:border-indigo-300 transition-all active:scale-95">3</button>
+            </div>
+            <div class="flex justify-center gap-2 mt-2">
+                <button onclick="pinKeypad('4')" type="button" class="w-12 h-12 rounded-xl bg-gray-50 hover:bg-indigo-50 text-gray-700 font-bold text-lg border border-gray-200 hover:border-indigo-300 transition-all active:scale-95">4</button>
+                <button onclick="pinKeypad('5')" type="button" class="w-12 h-12 rounded-xl bg-gray-50 hover:bg-indigo-50 text-gray-700 font-bold text-lg border border-gray-200 hover:border-indigo-300 transition-all active:scale-95">5</button>
+                <button onclick="pinKeypad('6')" type="button" class="w-12 h-12 rounded-xl bg-gray-50 hover:bg-indigo-50 text-gray-700 font-bold text-lg border border-gray-200 hover:border-indigo-300 transition-all active:scale-95">6</button>
+            </div>
+            <div class="flex justify-center gap-2 mt-2">
+                <button onclick="pinKeypad('7')" type="button" class="w-12 h-12 rounded-xl bg-gray-50 hover:bg-indigo-50 text-gray-700 font-bold text-lg border border-gray-200 hover:border-indigo-300 transition-all active:scale-95">7</button>
+                <button onclick="pinKeypad('8')" type="button" class="w-12 h-12 rounded-xl bg-gray-50 hover:bg-indigo-50 text-gray-700 font-bold text-lg border border-gray-200 hover:border-indigo-300 transition-all active:scale-95">8</button>
+                <button onclick="pinKeypad('9')" type="button" class="w-12 h-12 rounded-xl bg-gray-50 hover:bg-indigo-50 text-gray-700 font-bold text-lg border border-gray-200 hover:border-indigo-300 transition-all active:scale-95">9</button>
+            </div>
+            <div class="flex justify-center gap-2 mt-2">
+                <button onclick="pinClear()" type="button" class="w-12 h-12 rounded-xl bg-red-50 hover:bg-red-100 text-red-500 font-bold text-xs border border-red-200 hover:border-red-300 transition-all active:scale-95"><i class="fas fa-times"></i></button>
+                <button onclick="pinKeypad('0')" type="button" class="w-12 h-12 rounded-xl bg-gray-50 hover:bg-indigo-50 text-gray-700 font-bold text-lg border border-gray-200 hover:border-indigo-300 transition-all active:scale-95">0</button>
+                <button onclick="pinBackspace()" type="button" class="w-12 h-12 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-600 font-bold text-xs border border-amber-200 hover:border-amber-300 transition-all active:scale-95"><i class="fas fa-backspace"></i></button>
+            </div>
+        </div>
+        <p id="pin-error" class="text-xs text-red-500 text-center font-bold h-4"></p>
+        <div class="flex gap-2 mt-3">
+            <button onclick="tutupModalPin()" type="button" class="flex-1 py-3 font-bold text-gray-400 uppercase text-xs hover:bg-gray-50 rounded-xl transition-colors border border-gray-200">Batal</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== TOP BAR ==================== -->
+<header id="topbar" class="fixed top-0 left-0 right-0 h-14 bg-white border-b z-50 flex items-center px-4 gap-3" style="display:none">
+    <button id="btn-hamburger" onclick="toggleSidebar()" type="button" class="md:hidden w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-600">
+        <i class="fas fa-bars text-lg"></i>
+    </button>
+    <div class="flex items-center gap-2 cursor-pointer" onclick="navTo('home')">
+        <i class="fas fa-graduation-cap text-indigo-600 text-xl"></i>
+        <span class="font-bold text-lg tracking-tight hidden sm:inline">bki Classroom</span>
+    </div>
+    <div class="flex-1"></div>
+    <div id="topbar-user" class="flex items-center gap-2">
+        <div class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center shadow-sm">
+            <span id="topbar-avatar" class="text-white text-[10px] font-bold"></span>
+        </div>
+        <div class="hidden sm:block text-right">
+            <p id="topbar-name" class="text-[11px] font-bold text-gray-700 leading-tight"></p>
+            <p id="topbar-role" class="text-[9px] font-bold text-gray-400 leading-tight"></p>
+        </div>
+        <button onclick="doLogout()" class="ml-1 text-gray-300 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-50" title="Keluar">
+            <i class="fas fa-sign-out-alt text-sm"></i>
+        </button>
+    </div>
+</header>
+
+<!-- ==================== SIDEBAR BACKDROP (mobile) ==================== -->
+<div id="sidebar-backdrop" class="sidebar-backdrop" onclick="toggleSidebar()"></div>
+
+<!-- ==================== SIDEBAR ==================== -->
+<aside id="sidebar" class="sidebar custom-scroll">
+    <div id="sidebar-content" class="flex-1 overflow-y-auto custom-scroll"></div>
+    <div id="sidebar-footer" class="sidebar-footer"></div>
+</aside>
+
+<!-- ==================== MAIN CONTENT AREA ==================== -->
+<div id="main-area" class="main-area pt-14" style="display:none">
+
+    <!-- VIEW: HOME -->
+    <div id="view-home" class="p-6 md:p-8 max-w-6xl mx-auto">
+        <div id="role-banner" style="display:none" class="max-w-lg mb-6"></div>
+        <div id="home-folder-section" style="display:none" class="mb-10">
+            <h2 class="text-lg font-black text-gray-800 uppercase tracking-widest mb-5 flex items-center gap-2"><i class="fas fa-th-large text-indigo-500"></i> Kategori Materi</h2>
+            <div id="home-folder-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
+        </div>
+        <div id="home-materi-section" style="display:none">
+            <h2 id="home-materi-title" class="text-lg font-black text-gray-800 uppercase tracking-widest mb-5 flex items-center gap-2"><i class="fas fa-book-open text-indigo-500"></i> Materi Pelatihan</h2>
+            <div id="home-materi-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </div>
+        <div id="empty-home" style="display:none" class="text-center py-20">
+            <i class="fas fa-folder-open text-5xl text-gray-200 mb-4"></i>
+            <p class="text-gray-400 font-bold">Tidak ada materi yang tersedia untuk Anda.</p>
+        </div>
+    </div>
+
+    <!-- VIEW: FOLDER CONTENT -->
+    <div id="view-folder" class="p-6 md:p-8 max-w-6xl mx-auto" style="display:none">
+        <div class="flex items-center gap-3 mb-6 flex-wrap">
+            <button onclick="navTo('home')" type="button" class="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 font-bold text-sm transition-colors bg-indigo-50 hover:bg-indigo-100 px-4 py-2.5 rounded-xl border border-indigo-100">
+                <i class="fas fa-arrow-left"></i> Kembali
+            </button>
+            <div class="w-px h-6 bg-gray-200"></div>
+            <div id="folder-view-icon" class="w-9 h-9 rounded-lg flex items-center justify-center"></div>
+            <h2 id="folder-view-name" class="text-lg font-black text-gray-800 uppercase tracking-tight"></h2>
+            <span id="folder-view-badge" class="text-[9px] font-black uppercase px-2.5 py-1 rounded-full"></span>
+        </div>
+        <div id="folder-materi-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        <div id="empty-folder" style="display:none" class="text-center py-16">
+            <i class="fas fa-inbox text-4xl text-gray-200 mb-3"></i>
+            <p class="text-gray-400 text-sm">Folder ini belum memiliki materi.</p>
+        </div>
+    </div>
+
+    <!-- VIEW: LEARNING -->
+    <div id="view-learning" class="p-0" style="display:none">
+        <div class="max-w-5xl mx-auto">
+            <div class="bg-white rounded-none md:rounded-3xl shadow-lg border-0 md:border overflow-hidden mb-6">
+                <div id="header-bg-wrap" class="relative h-48 md:h-64 w-full" style="background:linear-gradient(135deg,#4f46e5,#7c3aed)">
+                    <img id="img-header-belajar" src="" class="w-full h-full object-cover" onerror="this.style.display='none'">
+                    <div class="absolute inset-0 bg-black/40 flex items-end p-6 md:p-10">
+                        <div class="text-white w-full">
+                            <h2 id="judul-aktif" class="text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-none drop-shadow-md">JUDUL</h2>
+                            <div class="flex items-center justify-between mt-3 flex-wrap gap-2">
+                                <p class="text-indigo-200 text-xs font-bold uppercase tracking-widest">Discussion Group Active</p>
+                                <div id="study-timer-display" class="bg-black/30 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-2 flex items-center gap-2.5">
+                                    <span id="timer-dot" class="w-2 h-2 rounded-full bg-emerald-400 timer-blink"></span>
+                                    <i class="fas fa-clock text-emerald-300 text-xs"></i>
+                                    <span id="timer-text" class="text-white font-mono font-bold text-sm tracking-wider">00:00:00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6 md:p-8">
+                    <div class="bg-gray-50 rounded-2xl border border-gray-100 p-4 mb-6">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-gray-500 uppercase flex items-center gap-2"><i class="fas fa-chart-pie text-indigo-500"></i> Progress</span>
+                            <span id="progress-text" class="text-xs font-black text-indigo-600">0/0 Sesi (0%)</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                            <div id="progress-bar" class="h-full rounded-full bg-gradient-to-r from-indigo-500 to-emerald-500 transition-all duration-700" style="width:0%"></div>
+                        </div>
+                    </div>
+                    <p id="status-belajar" class="text-sm text-rose-500 mb-6 font-bold flex items-center gap-2 bg-rose-50 p-3 rounded-xl w-fit"><i class="fas fa-lock"></i> Selesaikan semua sesi untuk mengkonfirmasi penyelesaian</p>
+                    <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Daftar Sesi:</h3>
+                    <div id="container-sesi" class="space-y-4 mb-6"></div>
+                    <button id="btn-lapor" onclick="prosesLaporSelesai()" type="button" disabled class="w-full bg-gray-400 text-white py-4 rounded-2xl font-black shadow-md mb-8 uppercase flex items-center justify-center gap-2 tracking-widest italic cursor-not-allowed transition-all"><i class="fas fa-check-circle"></i> Konfirmasi Penyelesaian Materi (Terkunci)</button>
+                    <hr class="mb-6 border-gray-200 border-dashed">
+                    <h3 class="font-bold mb-4 text-indigo-900 flex items-center gap-2 uppercase text-xs tracking-widest"><i class="fas fa-comments text-lg"></i> Diskusi Kelas</h3>
+                    <div id="chat-box" class="min-h-[250px] max-h-[400px] overflow-y-auto bg-white rounded-2xl p-6 space-y-4 mb-6 border-2 border-gray-100 shadow-inner custom-scroll"><div class="text-center text-xs text-gray-400 my-4">Belum ada pesan.</div></div>
+                    <div class="flex gap-3 items-center">
+                        <input id="chat-pesan" type="text" placeholder="Tulis pertanyaan..." class="flex-1 border-2 border-gray-100 rounded-2xl px-6 py-4 text-sm outline-none focus:border-indigo-500 bg-white transition-all" onkeydown="if(event.key==='Enter')kirimChat()">
+                        <button onclick="kirimChat()" type="button" class="bg-[#5851db] text-white w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg hover:scale-105 transition-transform"><i class="fas fa-paper-plane text-xl"></i></button>
+                    </div>
+                </div>
+            </div>
+            <button onclick="backFromLearning()" type="button" class="w-full bg-slate-800 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-slate-900 transition-all shadow-lg uppercase text-xs tracking-widest mb-6"><i class="fas fa-arrow-left"></i> Kembali</button>
+        </div>
+    </div>
+
+    <!-- VIEW: ADMIN -->
+    <div id="view-admin" class="p-6 md:p-8 max-w-7xl mx-auto" style="display:none">
+        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+            <h1 class="text-2xl font-black text-indigo-900 uppercase">Panel Administrator</h1>
+            <div class="flex gap-2 w-full md:w-auto flex-wrap">
+                <button onclick="downloadExcelWaktu()" type="button" class="bg-amber-500 text-white px-5 py-3 rounded-xl font-bold shadow-lg hover:bg-amber-600 flex items-center gap-2 transition-all text-xs uppercase"><i class="fas fa-clock"></i> Excel Waktu</button>
+                <button onclick="downloadExcel()" type="button" class="bg-emerald-600 text-white px-5 py-3 rounded-xl font-bold shadow-lg hover:bg-emerald-700 flex items-center gap-2 transition-all text-xs uppercase"><i class="fas fa-file-excel"></i> Excel Absen</button>
+                <button onclick="bukaModalTambahMateri()" type="button" class="bg-indigo-600 text-white px-5 py-3 rounded-xl font-bold shadow-lg hover:bg-indigo-700 text-xs uppercase flex items-center gap-2"><i class="fas fa-plus"></i> Add Materi</button>
+            </div>
+        </div>
+        <div class="bg-white rounded-3xl shadow-xl border overflow-hidden">
+            <div class="flex bg-gray-50 border-b p-2 gap-1.5 overflow-x-auto">
+                <button onclick="switchTabGuru('materi')" id="tab-g-materi" type="button" class="flex-1 min-w-[80px] py-3 rounded-xl bg-white shadow-sm text-indigo-600 font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5">Materi</button>
+                <button onclick="switchTabGuru('hidden')" id="tab-g-hidden" type="button" class="flex-1 min-w-[80px] py-3 rounded-xl text-gray-400 font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5"><i class="fas fa-eye-slash text-[9px]"></i> Hidden <span id="hiddenCount" class="bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full text-[9px] font-black ml-0.5" style="display:none">0</span></button>
+                <button onclick="switchTabGuru('waktu')" id="tab-g-waktu" type="button" class="flex-1 min-w-[80px] py-3 rounded-xl text-gray-400 font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5"><i class="fas fa-stopwatch text-[9px]"></i> Waktu</button>
+                <button onclick="switchTabGuru('nilai')" id="tab-g-nilai" type="button" class="flex-1 min-w-[80px] py-3 rounded-xl text-gray-400 font-bold text-[10px] uppercase tracking-widest">Nilai</button>
+                <button onclick="switchTabGuru('absen')" id="tab-g-absen" type="button" class="flex-1 min-w-[80px] py-3 rounded-xl text-gray-400 font-bold text-[10px] uppercase tracking-widest">Absen</button>
+                <button onclick="switchTabGuru('chat')" id="tab-g-chat" type="button" class="flex-1 min-w-[80px] py-3 rounded-xl text-gray-400 font-bold text-[10px] uppercase tracking-widest">Chat</button>
+            </div>
+            <div id="g-content-waktu" style="display:none" class="p-6">
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 mb-5">
+                    <div><h3 class="font-bold text-gray-900 flex items-center gap-2 text-sm uppercase"><i class="fas fa-stopwatch text-amber-500"></i> Histori Waktu Belajar</h3></div>
+                    <div class="flex items-center gap-2">
+                        <select id="filter-waktu-materi" onchange="filterWaktuBelajar()" class="border-2 border-gray-100 rounded-xl px-4 py-2.5 text-xs font-bold bg-white outline-none focus:border-indigo-500"><option value="all">Semua Materi</option></select>
+                        <select id="filter-waktu-sort" onchange="filterWaktuBelajar()" class="border-2 border-gray-100 rounded-xl px-4 py-2.5 text-xs font-bold bg-white outline-none focus:border-indigo-500"><option value="terlama">Terlama Dulu</option><option value="terbaru">Terbaru Dulu</option><option value="terbaru_total">Total Terbaru</option></select>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-4 mb-5 text-[10px] font-bold">
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-400"></span> > 30 mnt</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-400"></span> 10-30 mnt</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-red-400"></span> &lt; 10 mnt</span>
+                </div>
+                <div id="waktu-belajar-list" class="space-y-3"></div>
+                <div id="emptyWaktu" style="display:none" class="text-center py-16"><i class="fas fa-hourglass-half text-4xl text-gray-200 mb-3"></i><p class="text-sm text-gray-400">Belum ada data.</p></div>
+            </div>
+            <div id="g-content-materi" class="p-6"><div id="list-materi-admin" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div></div>
+            <div id="g-content-hidden" style="display:none" class="p-6">
+                <div class="bg-red-50 border border-red-100 rounded-xl p-4 mb-5"><p class="text-xs font-bold text-red-800"><i class="fas fa-info-circle mr-1"></i> Materi tersembunyi tidak terlihat oleh peserta.</p></div>
+                <div id="list-materi-hidden" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                <div id="emptyHidden" style="display:none" class="text-center py-12"><i class="fas fa-eye text-3xl text-gray-200 mb-3"></i><p class="text-sm text-gray-400">Tidak ada materi yang disembunyikan</p></div>
+            </div>
+            <div id="g-content-nilai" style="display:none" class="p-6 overflow-x-auto">
+                <div class="overflow-x-auto rounded-xl border"><table class="w-full text-left border-collapse min-w-[800px]"><thead><tr class="bg-indigo-50 text-[10px] uppercase font-black text-indigo-800 border-b"><th class="p-3">Nama</th><th class="p-3">NUP</th><th class="p-3">Unit</th><th class="p-3">Grup</th><th class="p-3 text-center">Materi</th><th class="p-3 text-center">Nilai</th><th class="p-3 text-right">Aksi</th></tr></thead><tbody id="tabel-laporan" class="divide-y text-sm"></tbody></table></div>
+            </div>
+            <div id="g-content-absen" style="display:none" class="p-6 overflow-x-auto">
+                <div class="overflow-x-auto rounded-xl border"><table class="w-full text-left border-collapse min-w-[700px]"><thead><tr class="bg-indigo-50 text-[10px] uppercase font-black text-indigo-800 border-b"><th class="p-3">Nama</th><th class="p-3">NUP</th><th class="p-3">Unit</th><th class="p-3">Grup</th><th class="p-3">Materi</th><th class="p-3">Waktu</th><th class="p-3 text-right">Aksi</th></tr></thead><tbody id="tabel-absensi" class="divide-y text-sm"></tbody></table></div>
+            </div>
+            <div id="g-content-chat" style="display:none" class="p-6"><div id="admin-chat-list" class="space-y-2"></div></div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== MODAL ABSEN ==================== -->
+<div id="modal-absen" class="modal-overlay">
+    <div class="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl animate-fade-in my-8">
+        <div class="text-center mb-6">
+            <div class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-3"><i class="fas fa-id-badge text-indigo-600 text-xl"></i></div>
+            <h3 class="font-bold text-xl text-indigo-900 uppercase tracking-tighter italic">Verifikasi Data</h3>
+            <p class="text-xs text-gray-500 mt-1">*Masukkan NUP Anda. Tekan Enter.*</p>
+        </div>
+        <div class="space-y-3 mb-8">
+            <input id="abs-nup" type="text" placeholder="Masukkan NUP Anda" class="w-full border-2 border-indigo-200 rounded-xl px-5 py-4 outline-none focus:border-indigo-600 bg-indigo-50 font-black text-sm transition-colors text-center uppercase tracking-widest" onkeydown="if(event.key==='Enter'){cekNUPDatabase()}" onkeyup="this.value=this.value.toUpperCase()">
+            <div class="grid grid-cols-1 gap-3 opacity-60 pointer-events-none transition-opacity" id="absen-data-container">
+                <input id="abs-nama" type="text" placeholder="Nama (Otomatis)" class="w-full border-2 border-gray-100 rounded-xl px-5 py-4 outline-none bg-gray-50 uppercase font-bold text-sm" readonly>
+                <input id="abs-unit" type="text" placeholder="Unit (Otomatis)" class="w-full border-2 border-gray-100 rounded-xl px-5 py-4 outline-none bg-gray-50 uppercase font-bold text-sm" readonly>
+            </div>
+            <p id="nup-error-msg" class="text-xs text-red-500 text-center font-bold h-4"></p>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="tutupModal('modal-absen')" type="button" class="flex-1 py-3 font-bold text-gray-400 uppercase text-xs hover:bg-gray-50 rounded-xl transition-colors">Batal</button>
+            <button id="btn-submit-absen" onclick="prosesAbsen()" type="button" class="flex-[2] bg-gray-300 text-gray-500 py-4 rounded-xl font-bold shadow-lg uppercase text-xs transition-all flex items-center justify-center gap-2 cursor-not-allowed" disabled>Kirim & Buka</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== MODAL DETAIL WAKTU ==================== -->
+<div id="modal-detail-waktu" class="modal-overlay">
+    <div class="bg-white w-full max-w-lg rounded-3xl p-8 shadow-2xl animate-fade-in my-8">
+        <div class="flex justify-between items-center mb-6 border-b pb-4">
+            <div><h3 class="font-bold text-lg text-indigo-900 uppercase">Detail Waktu</h3><p id="detail-waktu-subtitle" class="text-[11px] text-gray-400 mt-0.5"></p></div>
+            <button onclick="tutupModal('modal-detail-waktu')" type="button" class="text-gray-400 hover:text-red-500"><i class="fas fa-times text-xl"></i></button>
+        </div>
+        <div id="detail-waktu-content" class="space-y-3 max-h-[60vh] overflow-y-auto custom-scroll pr-2"></div>
+        <div class="mt-6 pt-4 border-t flex justify-between items-center">
+            <div><p class="text-[10px] font-bold text-gray-400 uppercase">Total</p><p id="detail-waktu-total" class="text-xl font-black text-indigo-600"></p></div>
+            <button onclick="tutupModal('modal-detail-waktu')" type="button" class="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold text-xs uppercase hover:bg-indigo-700">Tutup</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== MODAL TAMBAH MATERI ==================== -->
+<div id="modal-tambah" class="modal-overlay">
+    <div class="bg-white w-full max-w-3xl rounded-3xl p-8 shadow-2xl my-8">
+        <div class="flex justify-between items-center mb-6 border-b pb-4">
+            <h3 class="font-bold text-xl text-indigo-900 uppercase tracking-tighter italic">Tambah Materi</h3>
+            <button onclick="tutupModal('modal-tambah')" type="button" class="text-gray-400 hover:text-red-500"><i class="fas fa-times text-xl"></i></button>
+        </div>
+        <div class="space-y-4 mb-6 max-h-[60vh] overflow-y-auto custom-scroll pr-2">
+            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Judul Kategori</label><input id="input-judul" type="text" class="w-full border-2 border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 bg-gray-50 font-bold text-sm" placeholder="Modul 1 - K3 Dasar"></div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Folder / Kategori</label>
+                <div class="relative"><i class="fas fa-folder absolute left-4 top-1/2 -translate-y-1/2 text-amber-400 text-sm"></i>
+                <input id="input-folder" type="text" list="folder-datalist-add" class="w-full border-2 border-gray-100 rounded-xl pl-11 pr-4 py-3 outline-none focus:border-indigo-500 bg-gray-50 font-bold text-sm" placeholder="Contoh: Modul K3, Teknik Pengelasan"><datalist id="folder-datalist-add"></datalist></div>
+                <p class="text-[9px] text-gray-400 mt-1">*Kosongkan jika tidak ingin ke folder</p>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Target Peserta</label>
+                <select id="input-target-role" class="w-full border-2 border-gray-100 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 bg-gray-50 font-bold">
+                    <option value="semua">Semua Peserta (SDP + UMUM)</option><option value="sdp">SDP</option><option value="umum">UMUM</option>
+                </select>
+            </div>
+            <div>
+                <div class="flex justify-between items-center mb-3"><label class="block text-xs font-bold text-gray-500 uppercase">Daftar Sesi</label>
+                <button onclick="tambahSesi('add-sessions-container')" type="button" class="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 hover:bg-indigo-700"><i class="fas fa-plus text-[9px]"></i> Tambah</button></div>
+                <div id="add-sessions-container" class="space-y-3"></div>
+            </div>
+            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Cover Gambar</label>
+                <div class="upload-zone" id="add-upload-zone"><input type="file" id="input-gambar" accept="image/*" onchange="previewImage(this,'img-preview','add-placeholder')"><img id="img-preview" src="" style="display:none"><div id="add-placeholder" class="placeholder"><i class="fas fa-cloud-upload-alt text-xl text-indigo-400 mb-1"></i><p class="text-[10px] font-bold text-indigo-500">Klik untuk upload</p></div></div>
+            </div>
+        </div>
+        <div class="flex gap-2 border-t pt-4">
+            <button onclick="tutupModal('modal-tambah')" type="button" class="flex-1 py-3 font-bold text-gray-400 uppercase text-xs">Batal</button>
+            <button id="btn-simpan-materi" onclick="simpanMateriBaru()" type="button" class="flex-[2] bg-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg uppercase text-xs flex items-center justify-center gap-2"><span>Simpan</span><i class="fas fa-save"></i></button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== MODAL EDIT MATERI ==================== -->
+<div id="modal-edit" class="modal-overlay">
+    <div class="bg-white w-full max-w-3xl rounded-3xl p-8 shadow-2xl my-8">
+        <div class="flex justify-between items-center mb-6 border-b pb-4">
+            <h3 class="font-bold text-xl text-indigo-900 uppercase tracking-tighter italic">Edit Materi</h3>
+            <button onclick="tutupModal('modal-edit')" type="button" class="text-gray-400 hover:text-red-500"><i class="fas fa-times text-xl"></i></button>
+        </div>
+        <div class="space-y-4 mb-6 max-h-[60vh] overflow-y-auto custom-scroll pr-2">
+            <input type="hidden" id="edit-id">
+            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Judul</label><input id="input-edit-judul" type="text" class="w-full border-2 border-gray-100 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 bg-gray-50 font-bold text-sm"></div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Folder / Kategori</label>
+                <div class="relative"><i class="fas fa-folder absolute left-4 top-1/2 -translate-y-1/2 text-amber-400 text-sm"></i>
+                <input id="input-edit-folder" type="text" list="folder-datalist-edit" class="w-full border-2 border-gray-100 rounded-xl pl-11 pr-4 py-3 outline-none focus:border-indigo-500 bg-gray-50 font-bold text-sm" placeholder="Contoh: Modul K3"><datalist id="folder-datalist-edit"></datalist></div>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Target Peserta</label>
+                <select id="input-edit-target-role" class="w-full border-2 border-gray-100 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 bg-gray-50 font-bold">
+                    <option value="semua">Semua Peserta</option><option value="sdp">SDP</option><option value="umum">UMUM</option>
+                </select>
+            </div>
+            <div>
+                <div class="flex justify-between items-center mb-3"><label class="block text-xs font-bold text-gray-500 uppercase">Daftar Sesi</label>
+                <button onclick="tambahSesi('edit-sessions-container')" type="button" class="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 hover:bg-indigo-700"><i class="fas fa-plus text-[9px]"></i> Tambah</button></div>
+                <div id="edit-sessions-container" class="space-y-3"></div>
+            </div>
+            <div class="bg-red-50 p-3 rounded-xl border border-red-100 flex items-center justify-between"><div><label for="input-edit-hidden" class="block text-xs font-bold text-red-800 uppercase cursor-pointer">Status</label><span class="text-[9px] text-red-600">Centang = sembunyikan</span></div><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="input-edit-hidden" class="sr-only peer"><div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div></label></div>
+            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Ganti Cover</label>
+                <div class="upload-zone" id="edit-upload-zone"><input type="file" id="input-edit-gambar" accept="image/*" onchange="previewImage(this,'img-preview-edit','edit-placeholder')"><img id="img-preview-edit" src="" style="display:none"><div id="edit-placeholder" class="placeholder"><i class="fas fa-cloud-upload-alt text-xl text-indigo-400 mb-1"></i><p class="text-[10px] font-bold text-indigo-500">Klik untuk ganti</p></div></div>
+            </div>
+        </div>
+        <div class="flex gap-2 border-t pt-4">
+            <button onclick="tutupModal('modal-edit')" type="button" class="flex-1 py-3 font-bold text-gray-400 uppercase text-xs">Batal</button>
+            <button id="btn-update-materi" onclick="updateMateri()" type="button" class="flex-[2] bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-lg uppercase text-xs flex items-center justify-center gap-2"><span>Update</span><i class="fas fa-sync-alt"></i></button>
+        </div>
+    </div>
+</div>
+
+<div id="toastBox" class="fixed top-16 right-4 flex flex-col gap-2 pointer-events-none" style="z-index:999"></div>
+
+<script>
+/* ===== DATABASE PEGAWAI ===== */
+var databasePegawai = {
+    "38491":{nama:"SUWANDI",unit:"CABANG UTAMA KLAS BANTEN",role:"sdp"},"124825":{nama:"ELMY MUFIDAH",unit:"DIVISI HUMAN CAPITAL",role:"umum"},
+    "51097":{nama:"Rahmat Raviansyah",unit:"DIVISI SURVEY",role:"sdp"},"51098":{nama:"Rahmat Rosid",unit:"DIVISI SURVEY",role:"sdp"},
+    "51091":{nama:"Muhammad Alim Khairi Khalqih Nazril",unit:"DIVISI SURVEY",role:"sdp"},"51090":{nama:"Muh. Basyrih Syamsir",unit:"DIVISI SURVEY",role:"sdp"},
+    "51089":{nama:"Mohammad Sulthon Rozikin",unit:"DIVISI SURVEY",role:"sdp"},"51084":{nama:"Andi Nur Hidayat",unit:"DIVISI SURVEY",role:"sdp"},
+    "51083":{nama:"Alief Rizki Azhar",unit:"DIVISI SURVEY",role:"sdp"},"51086":{nama:"Bani Ariski",unit:"DIVISI SURVEY",role:"sdp"},
+    "51094":{nama:"Ode Gaffar Rakha",unit:"DIVISI SURVEY",role:"sdp"},"51099":{nama:"Rafi' Satria Lazuard",unit:"DIVISI SURVEY",role:"sdp"},
+    "51085":{nama:"Andrew Natanael Rumengan",unit:"DIVISI SURVEY",role:"sdp"},"51093":{nama:"Muhammad Rizki Darmawan",unit:"DIVISI SURVEY",role:"sdp"},
+    "51092":{nama:"Muhammad Gerry Shafa",unit:"DIVISI SURVEY",role:"sdp"},"51095":{nama:"Rachmat Hidayat",unit:"DIVISI SURVEY",role:"sdp"},
+    "51087":{nama:"Bobby Marchelino",unit:"DIVISI SURVEY",role:"sdp"},"51088":{nama:"Chomaeni Hanggar Ardianto",unit:"DIVISI SURVEY",role:"sdp"},
+    "51096":{nama:"Rachmat Zakaria Ilyas",unit:"DIVISI SURVEY",role:"sdp"},"71408":{nama:"AHMAD ZAKKY",unit:"DIVISI HUMAN CAPITAL",role:"umum"},
+    "7981":{nama:"RIDWAN ARIFIN",unit:"DIVISI HUMAN CAPITAL",role:"umum"},"50780":{nama:"Muhtar",unit:"HUMAN CAPITAL",role:"sdp"},
+    "104416":{nama:"M.ICHSAN",unit:"DIVISI HUMAN CAPITAL",role:"umum"}
+	
+};
+Object.keys(databasePegawai).forEach(function(n){databasePegawai[n].role=(databasePegawai[n].role||'semua').toLowerCase().trim()});
+
+var TRAINER_PIN="000000";
+var daftarRole=[{key:'semua',label:'Semua Peserta',cls:'badge-semua',icon:'fa-users',color:'#374151'},{key:'sdp',label:'SDP',cls:'badge-sdp',icon:'fa-building',color:'#0369a1'},{key:'umum',label:'UMUM',cls:'badge-umum',icon:'fa-globe',color:'#92400e'},{key:'trainer',label:'Trainer',cls:'badge-trainer',icon:'fa-chalkboard-teacher',color:'#991b1b'}];
+function getRoleInfo(r){r=(r||'').toLowerCase().trim();for(var i=0;i<daftarRole.length;i++){if(daftarRole[i].key===r)return daftarRole[i]}return{key:r||'unknown',label:r||'Unknown',cls:'badge-semua',icon:'fa-user',color:'#374151'}}
+function getUserRole(){return(localStorage.getItem('user_role')||'').toLowerCase().trim()}
+function canSeeMaterial(tr){var m=getUserRole();if(!m||m==='trainer')return true;if(!tr||tr==='semua')return true;return m===tr.toLowerCase().trim()}
+function isTrainerMode(){return localStorage.getItem('trainer_unlocked')==='true'}
+
+/* ===== Firebase ===== */
+var db=null,storageRef=null;
+try{firebase.initializeApp({apiKey:"AIzaSyBkLiqHrvTuFFpaVsmWT2H1wF5NzwgmuBQ",authDomain:"diklatppsdm-e7788.firebaseapp.com",databaseURL:"https://diklatppsdm-e7788-default-rtdb.firebaseio.com",projectId:"diklatppsdm-e7788",storageBucket:"diklatppsdm-e7788.firebasestorage.app",messagingSenderId:"573889493408",appId:"1:573889493408:web:fd7704a7d40e72e72c4cc5"});db=firebase.database();storageRef=firebase.storage()}catch(e){console.error(e)}
+
+var curId="",curJudul="",allMateriData={},allStudyTimeData={},allAbsenData={},allLaporanData={},allChatData={},currentGuruTab='materi',currentKaryawanData=null,chatListenerRef=null,pendingTrainerAccess=false;
+var currentView='home'; // home | folder | learning | admin
+var currentFolderName=null;
+var previousView='home';
+var previousFolder=null;
+
+/* ===== COLORS ===== */
+var FOLDER_COLORS=['#f59e0b','#3b82f6','#8b5cf6','#10b981','#f43f5e','#06b6d4','#f97316','#ec4899','#14b8a6','#6366f1'];
+function getFolderColor(s){var h=0;for(var i=0;i<(s||'').length;i++){h=s.charCodeAt(i)+((h<<5)-h)}return FOLDER_COLORS[Math.abs(h)%FOLDER_COLORS.length]}
+function getGradient(s){var h=0;for(var i=0;i<(s||'').length;i++){h=s.charCodeAt(i)+((h<<5)-h)}var g=['linear-gradient(135deg,#059669,#0d9488)','linear-gradient(135deg,#e11d48,#f472b6)','linear-gradient(135deg,#d97706,#f59e0b)','linear-gradient(135deg,#4f46e5,#7c3aed)','linear-gradient(135deg,#0891b2,#3b82f6)','linear-gradient(135deg,#c026d3,#e879f9)','linear-gradient(135deg,#65a30d,#22c55e)','linear-gradient(135deg,#dc2626,#f97316)','linear-gradient(135deg,#0284c7,#6366f1)','linear-gradient(135deg,#9333ea,#ec4899)','linear-gradient(135deg,#0f766e,#06b6d4)','linear-gradient(135deg,#ea580c,#ef4444)','linear-gradient(135deg,#4338ca,#2563eb)','linear-gradient(135deg,#b45309,#eab308)','linear-gradient(135deg,#be185d,#a855f7)','linear-gradient(135deg,#047857,#34d399)'];return g[Math.abs(h)%g.length]}
+
+/* ===== TIMER ===== */
+var studyTimerSeconds=0,studyTimerInterval=null,studyTimerSaveInterval=null,studyTimerActive=false,studyTimerTabVisible=true,studyTimerMateriId='';
+function formatDetik(d){d=Math.max(0,Math.floor(d));var h=Math.floor(d/3600),m=Math.floor((d%3600)/60),s=d%60;return(h>0?String(h).padStart(2,'0')+':':'')+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')}
+function formatDetikLabel(d){d=Math.max(0,Math.floor(d));var h=Math.floor(d/3600),m=Math.floor((d%3600)/60),s=d%60;if(h>0)return h+' jam '+m+' menit '+s+' detik';if(m>0)return m+' menit '+s+' detik';return s+' detik'}
+function updateTimerDisplay(){var el=document.getElementById('timer-text'),dot=document.getElementById('timer-dot');if(el)el.textContent=formatDetik(studyTimerSeconds);if(dot){dot.className=(studyTimerTabVisible&&studyTimerActive)?'w-2 h-2 rounded-full bg-emerald-400 timer-blink':(studyTimerActive?'w-2 h-2 rounded-full bg-amber-400':'w-2 h-2 rounded-full bg-gray-500')}}
+function _doSaveStudyTime(){if(!db||!studyTimerMateriId||studyTimerSeconds<=0)return;var nup=localStorage.getItem('user_nup')||'',nama=localStorage.getItem('user_nama')||'Anonim',unit=localStorage.getItem('user_unit')||'-';if(!nup)return;var secs=studyTimerSeconds;db.ref('studyTime/'+studyTimerMateriId+'/'+nup).transaction(function(c){if(c===null)return{nama:nama,unit:unit,totalDetik:secs,sesiCount:1,lastSeen:firebase.database.ServerValue.TIMESTAMP,sesiTerakhir:secs};c.totalDetik=(c.totalDetik||0)+secs;c.sesiCount=(c.sesiCount||0)+1;c.lastSeen=firebase.database.ServerValue.TIMESTAMP;c.sesiTerakhir=secs;c.nama=nama;c.unit=unit;return c});studyTimerSeconds=0}
+function startStudyTimer(id){stopStudyTimer();studyTimerMateriId=id;studyTimerSeconds=0;studyTimerActive=true;studyTimerTabVisible=true;updateTimerDisplay();studyTimerInterval=setInterval(function(){if(studyTimerTabVisible){studyTimerSeconds++;updateTimerDisplay()}},1000);studyTimerSaveInterval=setInterval(function(){_doSaveStudyTime()},30000)}
+function stopStudyTimer(){if(studyTimerActive&&studyTimerSeconds>0)_doSaveStudyTime();studyTimerActive=false;studyTimerMateriId='';if(studyTimerInterval){clearInterval(studyTimerInterval);studyTimerInterval=null}if(studyTimerSaveInterval){clearInterval(studyTimerSaveInterval);studyTimerSaveInterval=null}studyTimerSeconds=0;updateTimerDisplay()}
+document.addEventListener('visibilitychange',function(){studyTimerTabVisible=!document.hidden;updateTimerDisplay()});
+
+/* ===== UTILS ===== */
+function bukaModal(id){document.getElementById(id).style.display='flex'}
+function tutupModal(id){document.getElementById(id).style.display='none'}
+function shakeEl(e){if(e){e.classList.remove('shake');void e.offsetWidth;e.classList.add('shake')}}
+function toast(m,t){var b=document.getElementById('toastBox'),c={success:'bg-emerald-600',error:'bg-red-600',info:'bg-indigo-600',warn:'bg-amber-500'},ic={success:'fa-check-circle',error:'fa-exclamation-circle',info:'fa-info-circle',warn:'fa-exclamation-triangle'},d=document.createElement('div');d.className=(c[t]||c.info)+' text-white px-5 py-3 rounded-xl shadow-lg text-xs font-bold flex items-center gap-2 animate-fade-in pointer-events-auto max-w-sm';d.innerHTML='<i class="fas '+(ic[t]||ic.info)+'"></i> '+m;b.appendChild(d);setTimeout(function(){d.style.opacity='0';d.style.transition='opacity .3s';setTimeout(function(){d.remove()},300)},3000)}
+function previewImage(i,imgId,phId){var img=document.getElementById(imgId),ph=document.getElementById(phId);if(i.files&&i.files[0]){var r=new FileReader();r.onload=function(e){img.src=e.target.result;img.style.display='';ph.classList.add('hidden')};r.readAsDataURL(i.files[0])}}
+function tambahSesi(cid){var c=document.getElementById(cid),idx=c.children.length+1,d=document.createElement('div');d.className='bg-gray-50 rounded-xl p-3 border border-gray-100 flex gap-2 items-start animate-fade-in';d.innerHTML='<div class="flex-1 space-y-2"><input type="text" placeholder="Judul Sesi '+idx+'" class="sesi-judul w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500 bg-white"><input type="url" placeholder="Link YouTube / Drive (opsional)" class="sesi-link w-full border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500 bg-white"></div><button onclick="this.parentElement.remove()" type="button" class="text-red-400 hover:text-red-600 p-2 mt-1"><i class="fas fa-trash-alt text-sm"></i></button>';c.appendChild(d)}
+function populateFolderDatalist(did){var dl=document.getElementById(did);if(!dl)return;dl.innerHTML='';var f={};Object.keys(allMateriData).forEach(function(id){var v=(allMateriData[id].folder||'').trim();if(v)f[v]=true});Object.keys(f).sort().forEach(function(v){var o=document.createElement('option');o.value=v;dl.appendChild(o)})}
+
+/* ===== SIDEBAR ===== */
+function toggleSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebar-backdrop');s.classList.toggle('open');b.classList.toggle('open')}
+function renderSidebar(){
+    var visible=getVisibleMateriForSiswa();
+    var folders=getFoldersFromVisibleMateri(visible);
+    var folderNames=Object.keys(folders.folderMap).sort();
+    var hasFolders=folderNames.length>0;
+    var el=document.getElementById('sidebar-content');
+    var html='';
+    html+='<div class="sidebar-nav-item'+(currentView==='home'?' active':'')+'" onclick="navTo(\'home\')"><i class="fas fa-home"></i><span>Beranda</span></div>';
+    if(hasFolders){
+        html+='<div class="sidebar-divider"></div>';
+        html+='<div class="sidebar-section-title">Kategori Materi</div>';
+        folderNames.forEach(function(fn){
+            var items=folders.folderMap[fn];
+            var color=getFolderColor(fn);
+            var isActive=currentView==='folder'&&currentFolderName===fn;
+            html+='<div class="sidebar-folder-item'+(isActive?' active':'')+'" style="'+(isActive?'border-left-color:'+color+';background:'+color+'10':'')+'" onclick="navToFolder(\''+fn.replace(/'/g,"\\'")+'\')">';
+            html+='<div class="sidebar-folder-dot" style="background:'+color+'"></div>';
+            html+='<span class="sidebar-folder-name" title="'+fn+'">'+fn+'</span>';
+            html+='<span class="sidebar-folder-count">'+items.length+'</span>';
+            html+='</div>';
+        });
+    }
+    html+='<div class="sidebar-divider"></div>';
+    html+='<div class="sidebar-nav-item'+(currentView==='admin'?' active':'')+'" onclick="navTo(\'admin\')"><i class="fas fa-chalkboard-teacher"></i><span>Panel Trainer</span></div>';
+    el.innerHTML=html;
+    /* Footer */
+    var nama=localStorage.getItem('user_nama')||'';
+    var nup=localStorage.getItem('user_nup')||'';
+    var role=getRoleInfo(getUserRole());
+    document.getElementById('sidebar-footer').innerHTML='<div class="flex items-center gap-3"><div class="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center shadow-sm"><span class="text-white text-[11px] font-bold">'+(nama?nama.charAt(0).toUpperCase():'?')+'</span></div><div class="flex-1 min-w-0"><p class="text-xs font-bold text-gray-800 truncate">'+nama+'</p><p class="text-[10px] text-gray-400 truncate">NUP: '+nup+'</p></div><span class="text-[8px] font-black uppercase px-2 py-0.5 rounded-full '+role.cls+'">'+role.label+'</span></div>';
+    /* Topbar user */
+    document.getElementById('topbar-avatar').textContent=nama?nama.charAt(0).toUpperCase():'?';
+    document.getElementById('topbar-name').textContent=nama;
+    document.getElementById('topbar-role').textContent=role.label;
+}
+
+/* ===== NAVIGATION ===== */
+function navTo(view){
+    if(view==='admin'){if(!isTrainerMode()){pendingTrainerAccess=true;bukaModal('modal-pin-trainer');return}}
+    closeSidebarMobile();
+    switchView(view,null);
+}
+function navToFolder(fn){closeSidebarMobile();switchView('folder',fn)}
+function switchView(view,folder){
+    stopStudyTimer();if(chatListenerRef){chatListenerRef.off();chatListenerRef=null}
+    if(currentView==='learning'){previousView=currentFolderName?'folder':'home';previousFolder=currentFolderName}
+    currentView=view;currentFolderName=folder;curId='';curJudul='';
+    var views=['view-home','view-folder','view-learning','view-admin'];
+    views.forEach(function(v){document.getElementById(v).style.display='none'});
+    if(view==='home'){document.getElementById('view-home').style.display='';renderHomeView()}
+    else if(view==='folder'){document.getElementById('view-folder').style.display='';renderFolderView(folder)}
+    else if(view==='admin'){document.getElementById('view-admin').style.display='';renderAdminMateri();if(currentGuruTab==='waktu')renderWaktuBelajar();if(currentGuruTab==='nilai')renderNilai();if(currentGuruTab==='absen')renderAbsen();if(currentGuruTab==='chat')renderAdminChat()}
+    renderSidebar();
+    window.scrollTo({top:0,behavior:'smooth'});
+}
+function closeSidebarMobile(){if(window.innerWidth<769){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebar-backdrop').classList.remove('open')}}
+function backFromLearning(){
+    stopStudyTimer();if(chatListenerRef){chatListenerRef.off();chatListenerRef=null}
+    curId='';curJudul='';
+    switchView(previousFolder?'folder':'home',previousFolder);
+}
+
+/* ===== DATA HELPERS ===== */
+function getVisibleMateriForSiswa(){var a=[];Object.keys(allMateriData).forEach(function(id){var m=allMateriData[id];if(m.hidden)return;if(!canSeeMaterial(m.targetRole))return;a.push({id:id,data:m})});return a}
+function getFoldersFromVisibleMateri(list){var fm={},ug=[];list.forEach(function(it){var f=(it.data.folder||'').trim();if(f){if(!fm[f])fm[f]=[];fm[f].push(it)}else{ug.push(it)}});return{folderMap:fm,ungrouped:ug}}
+function getFolderRoleBadge(items){var r={};items.forEach(function(it){r[(it.data.targetRole||'semua').toLowerCase().trim()]=true});var k=Object.keys(r);if(!k.length||(k.length===1&&k[0]==='semua'))return getRoleInfo('semua');if(k.length===1)return getRoleInfo(k[0]);return getRoleInfo('semua')}
+
+/* ===== RENDER HOME ===== */
+function renderHomeView(){
+    var visible=getVisibleMateriForSiswa();
+    var folders=getFoldersFromVisibleMateri(visible);
+    var hasFolders=Object.keys(folders.folderMap).length>0;
+    var bannerEl=document.getElementById('role-banner');
+    var myRole=getUserRole();
+    if(myRole&&myRole!=='trainer'){var ri=getRoleInfo(myRole);bannerEl.style.display='';bannerEl.className='max-w-lg mb-6 rounded-2xl px-5 py-3.5 flex items-center gap-3 text-sm font-bold '+(myRole==='sdp'?'banner-sdp':'banner-umum');bannerEl.innerHTML='<i class="fas '+ri.icon+' text-xl"></i><div><p class="font-black uppercase tracking-wide text-xs">Anda login sebagai: '+ri.label+'</p><p class="text-[10px] opacity-70 mt-0.5">Materi ditampilkan sesuai kualifikasi</p></div>'}
+    else{bannerEl.style.display='none'}
+    if(!visible.length){document.getElementById('home-folder-section').style.display='none';document.getElementById('home-materi-section').style.display='none';document.getElementById('empty-home').style.display='';return}
+    document.getElementById('empty-home').style.display='none';
+    if(hasFolders){
+        document.getElementById('home-folder-section').style.display='';
+        var fNames=Object.keys(folders.folderMap).sort();
+        document.getElementById('home-folder-grid').innerHTML=fNames.map(function(fn){
+            var items=folders.folderMap[fn];var ri=getFolderRoleBadge(items);var color=getFolderColor(fn);
+            return '<div class="animate-fade-in cursor-pointer group" onclick="navToFolder(\''+fn.replace(/'/g,"\\'")+'\')">'+
+                '<div class="bg-white rounded-2xl border-2 border-gray-100 overflow-hidden hover:shadow-lg hover:border-gray-200 transition-all group-hover:-translate-y-1">'+
+                '<div class="h-2" style="background:'+color+'"></div>'+
+                '<div class="p-5">'+
+                '<div class="flex items-start gap-3 mb-4">'+
+                '<div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style="background:'+color+'15"><i class="fas fa-folder text-lg" style="color:'+color+'"></i></div>'+
+                '<div class="min-w-0 flex-1"><h4 class="font-black text-sm text-gray-900 uppercase tracking-tight leading-tight line-clamp-2">'+fn+'</h4>'+
+                '<span class="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full '+ri.cls+' inline-flex items-center gap-0.5 mt-1.5"><i class="fas '+ri.icon+' text-[7px]"></i>'+ri.label+'</span></div></div>'+
+                '<div class="flex items-center justify-between text-xs text-gray-400 font-bold"><span>'+items.length+' materi</span><i class="fas fa-chevron-right text-[10px] group-hover:translate-x-1 transition-transform"></i></div>'+
+                '</div></div></div>';
+        }).join('');
+    }else{document.getElementById('home-folder-section').style.display='none'}
+    if(folders.ungrouped.length>0){
+        document.getElementById('home-materi-section').style.display='';
+        document.getElementById('home-materi-title').innerHTML='<i class="fas fa-book-open text-indigo-500"></i> '+(hasFolders?'Materi Tanpa Kategori':'Materi Pelatihan');
+        document.getElementById('home-materi-grid').innerHTML=folders.ungrouped.map(function(it){return renderMateriCard(it.id,it.data)}).join('');
+    }else{document.getElementById('home-materi-section').style.display='none';if(!hasFolders)document.getElementById('empty-home').style.display=''}
+}
+
+/* ===== RENDER FOLDER VIEW ===== */
+function renderFolderView(fn){
+    var visible=getVisibleMateriForSiswa();
+    var folders=getFoldersFromVisibleMateri(visible);
+    var items=folders.folderMap[fn]||[];
+    var color=getFolderColor(fn);
+    var ri=getFolderRoleBadge(items);
+    var iconEl=document.getElementById('folder-view-icon');
+    iconEl.style.background=color+'15';iconEl.innerHTML='<i class="fas fa-folder-open text-lg" style="color:'+color+'"></i>';
+    document.getElementById('folder-view-name').textContent=fn;
+    var badge=document.getElementById('folder-view-badge');badge.className='text-[9px] font-black uppercase px-2.5 py-1 rounded-full '+ri.cls;badge.innerHTML='<i class="fas '+ri.icon+' mr-1"></i>'+ri.label;
+    if(!items.length){document.getElementById('folder-materi-grid').innerHTML='';document.getElementById('empty-folder').style.display=''}
+    else{document.getElementById('empty-folder').style.display='none';document.getElementById('folder-materi-grid').innerHTML=items.map(function(it){return renderMateriCard(it.id,it.data)}).join('')}
+}
+
+/* ===== RENDER MATERI CARD ===== */
+function renderMateriCard(id,m){
+    var grad=getGradient(m.judul||id);var nup=localStorage.getItem('user_nup')||'';var us=(m.selesaiSesi||{})[nup]||{};
+    var total=(m.sesi||[]).length;var done=Object.keys(us).filter(function(k){return us[k]}).length;
+    var pct=total>0?Math.round((done/total)*100):0;
+    var si=pct===100?'<i class="fas fa-check-circle text-emerald-400"></i>':(pct>0?'<i class="fas fa-spinner text-amber-400"></i>':'<i class="fas fa-play-circle text-gray-400"></i>');
+    return '<div class="animate-fade-in group cursor-pointer rounded-2xl overflow-hidden bg-white border-2 border-gray-100 hover:shadow-xl hover:border-indigo-200 hover:-translate-y-1 transition-all" onclick="openMateri(\''+id+'\')">'+
+        '<div class="relative h-40 overflow-hidden" style="background:'+grad+'">'+(m.gambar?'<img src="'+m.gambar+'" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.style.display=\'none\'">':'')+
+        '<div class="absolute inset-0 card-gradient"></div><div class="absolute top-3 right-3 text-lg">'+si+'</div>'+
+        '<div class="absolute bottom-3 left-3 right-3"><h3 class="text-white font-black text-sm uppercase tracking-tight leading-tight drop-shadow-md line-clamp-2">'+(m.judul||'Tanpa Judul')+'</h3></div></div>'+
+        '<div class="p-3.5"><div class="flex items-center justify-between mb-2"><span class="text-[10px] text-gray-400 font-bold">'+done+'/'+total+' Sesi</span><span class="text-[10px] font-black '+(pct===100?'text-emerald-600':'text-indigo-600')+'">'+pct+'%</span></div>'+
+        '<div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden"><div class="h-full rounded-full transition-all duration-500 '+(pct===100?'bg-emerald-500':'bg-indigo-500')+'" style="width:'+pct+'%"></div></div></div></div>';
+}
+
+/* ===== OPEN MATERI ===== */
+function openMateri(id){
+    var m=allMateriData[id];if(!m)return;
+    var nup=localStorage.getItem('user_nup')||'';var sudahAbsen=false;
+    if(allAbsenData[id]){Object.keys(allAbsenData[id]).forEach(function(k){if(allAbsenData[id][k].nup===nup)sudahAbsen=true})}
+    if(!sudahAbsen){currentKaryawanData={nup:nup,nama:localStorage.getItem('user_nama')||'',unit:localStorage.getItem('user_unit')||'',role:getUserRole()};curId=id;curJudul=m.judul;prosesAbsenOtomatis(id,m);return}
+    masukBelajar(id,m);
+}
+function prosesAbsenOtomatis(id,m){if(!db||!currentKaryawanData)return;var a={nup:currentKaryawanData.nup,nama:currentKaryawanData.nama,unit:currentKaryawanData.unit,role:currentKaryawanData.role,waktu:firebase.database.ServerValue.TIMESTAMP};db.ref('absen/'+id).push(a).then(function(){if(allAbsenData[id])allAbsenData[id][Date.now()]=a;masukBelajar(id,m)}).catch(function(e){toast('Gagal absen: '+e.message,'error')})}
+function masukBelajar(id,m){
+    if(currentView!=='learning'){previousView=currentFolderName?'folder':'home';previousFolder=currentFolderName}
+    curId=id;curJudul=m.judul;currentView='learning';
+    var views=['view-home','view-folder','view-learning','view-admin'];views.forEach(function(v){document.getElementById(v).style.display='none'});
+    document.getElementById('view-learning').style.display='';
+    document.getElementById('judul-aktif').textContent=m.judul||'';
+    var imgEl=document.getElementById('img-header-belajar');
+    if(m.gambar){imgEl.src=m.gambar;imgEl.style.display='';document.getElementById('header-bg-wrap').style.background='transparent'}
+    else{imgEl.style.display='none';document.getElementById('header-bg-wrap').style.background=getGradient(m.judul)}
+    renderSesi(m);updateProgress(m);loadChat(id);startStudyTimer(id);renderSidebar();
+    window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ===== SESI & PROGRESS ===== */
+function renderSesi(m){var c=document.getElementById('container-sesi'),nup=localStorage.getItem('user_nup')||'',us=(m.selesaiSesi||{})[nup]||{},sl=m.sesi||[];if(!sl.length){c.innerHTML='<p class="text-gray-400 text-sm text-center py-4">Tidak ada sesi.</p>';return}c.innerHTML=sl.map(function(s,i){var d=!!us[i],sc=d?'sesi-complete':'sesi-pending',st=d?'<span class="text-emerald-600 text-xs font-bold"><i class="fas fa-check-circle mr-1"></i>Selesai</span>':'<span class="text-gray-400 text-xs font-bold"><i class="fas fa-circle mr-1 text-[8px]"></i>Belum</span>',lb=s.link?'<a href="'+s.link+'" target="_blank" class="text-indigo-500 hover:text-indigo-700 text-xs font-bold flex items-center gap-1 ml-2"><i class="fas fa-external-link-alt text-[9px]"></i>Buka</a>':'',tc=d?'show':'hide';return '<div class="session-card '+sc+' animate-fade-in"><div class="sesi-header"><div class="flex items-center gap-3"><span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-black">'+(i+1)+'</span><span class="font-bold text-sm text-gray-800">'+s.judul+'</span>'+lb+'</div><div class="flex items-center gap-2">'+st+'<button onclick="toggleSesi(\''+curId+'\','+i+',this)" type="button" class="toggle-eye '+tc+'" title="Tandai selesai"><i class="fas '+(d?'fa-eye':'fa-eye-slash')+'"></i></button></div></div></div>'}).join('')}
+function toggleSesi(mid,si){if(!db)return;var nup=localStorage.getItem('user_nup')||'';db.ref('materi/'+mid+'/selesaiSesi/'+nup+'/'+si).once('value').then(function(snap){return db.ref('materi/'+mid+'/selesaiSesi/'+nup+'/'+si).set(!snap.val())}).then(function(){var m=allMateriData[mid];if(m){if(!m.selesaiSesi)m.selesaiSesi={};if(!m.selesaiSesi[nup])m.selesaiSesi[nup]={};m.selesaiSesi[nup][si]=!m.selesaiSesi[nup][si]}renderSesi(m);updateProgress(m)}).catch(function(){toast('Gagal','error')})}
+function updateProgress(m){var nup=localStorage.getItem('user_nup')||'',us=(m.selesaiSesi||{})[nup]||{},t=(m.sesi||[]).length,d=Object.keys(us).filter(function(k){return us[k]}).length,p=t>0?Math.round((d/t)*100):0;document.getElementById('progress-text').textContent=d+'/'+t+' Sesi ('+p+'%)';document.getElementById('progress-bar').style.width=p+'%';var bl=document.getElementById('btn-lapor'),se=document.getElementById('status-belajar');if(p===100&&t>0){bl.disabled=false;bl.className='w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white py-4 rounded-2xl font-black shadow-lg mb-8 uppercase flex items-center justify-center gap-2 tracking-widest italic hover:from-emerald-600 hover:to-emerald-700 transition-all cursor-pointer';bl.innerHTML='<i class="fas fa-check-circle"></i> Konfirmasi Penyelesaian Materi';se.style.display='none'}else{bl.disabled=true;bl.className='w-full bg-gray-400 text-white py-4 rounded-2xl font-black shadow-md mb-8 uppercase flex items-center justify-center gap-2 tracking-widest italic cursor-not-allowed transition-all';bl.innerHTML='<i class="fas fa-check-circle"></i> Konfirmasi Penyelesaian Materi (Terkunci)';se.style.display=''}}
+
+/* ===== KONFIRMASI ===== */
+function prosesLaporSelesai(){if(!db||!curId)return;var nup=localStorage.getItem('user_nup')||'',nama=localStorage.getItem('user_nama')||'',unit=localStorage.getItem('user_unit')||'',role=getUserRole();db.ref('laporan/'+curId+'/'+nup).set({nama:nama,nup:nup,unit:unit,role:role,nilai:100,waktu:firebase.database.ServerValue.TIMESTAMP}).then(function(){toast('Materi berhasil diselesaikan!','success')}).catch(function(e){toast('Gagal: '+e.message,'error')})}
+
+/* ===== CHAT ===== */
+function loadChat(mid){if(chatListenerRef){chatListenerRef.off();chatListenerRef=null}var cb=document.getElementById('chat-box');cb.innerHTML='<div class="text-center text-xs text-gray-400 my-4"><i class="fas fa-spinner fa-spin mr-1"></i> Memuat...</div>';chatListenerRef=db.ref('chat/'+mid).orderByChild('timestamp').limitToLast(100);chatListenerRef.on('value',function(snap){var data=snap.val();if(!data){cb.innerHTML='<div class="text-center text-xs text-gray-400 my-4">Belum ada pesan.</div>';return}var nup=localStorage.getItem('user_nup')||'',h='',ks=Object.keys(data).sort(function(a,b){return(data[a].timestamp||0)-(data[b].timestamp||0)});ks.forEach(function(k){var c=data[k],me=c.nup===nup,t=c.timestamp?new Date(c.timestamp).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'';h+='<div class="flex gap-3 '+(me?'flex-row-reverse':'')+'"><div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white text-[10px] font-bold '+(me?'bg-indigo-500':'bg-gray-400')+'">'+(c.nama?c.nama.charAt(0).toUpperCase():'?')+'</div><div class="max-w-[75%]"><div class="flex items-center gap-2 mb-1 '+(me?'flex-row-reverse':'')+'"><span class="text-[10px] font-bold text-gray-500">'+(c.nama||'Anonim')+'</span><span class="text-[9px] text-gray-300">'+t+'</span></div><div class="rounded-2xl px-4 py-2.5 text-sm '+(me?'bg-indigo-600 text-white rounded-tr-md':'bg-gray-100 text-gray-800 rounded-tl-md')+'">'+(c.pesan||'')+'</div></div></div>'});cb.innerHTML=h||'<div class="text-center text-xs text-gray-400 my-4">Belum ada pesan.</div>';cb.scrollTop=cb.scrollHeight})}
+function kirimChat(){var i=document.getElementById('chat-pesan'),p=i.value.trim();if(!p||!db||!curId)return;db.ref('chat/'+curId).push({nup:localStorage.getItem('user_nup')||'',nama:localStorage.getItem('user_nama')||'Anonim',pesan:p,timestamp:firebase.database.ServerValue.TIMESTAMP});i.value=''}
+
+/* ===== LOGIN/LOGOUT ===== */
+function doLogin(){var nup=document.getElementById('login-nup').value.trim().toUpperCase(),err=document.getElementById('login-error');err.textContent='';if(!nup){err.textContent='Masukkan NUP';shakeEl(document.getElementById('login-nup'));return}var p=databasePegawai[nup];if(!p){err.textContent='NUP tidak ditemukan';shakeEl(document.getElementById('login-nup'));return}localStorage.setItem('user_nup',nup);localStorage.setItem('user_nama',p.nama);localStorage.setItem('user_unit',p.unit);localStorage.setItem('user_role',p.role);document.getElementById('login-overlay').style.display='none';document.getElementById('topbar').style.display='';document.getElementById('main-area').style.display='';currentView='home';currentFolderName=null;loadAllData();toast('Selamat datang, '+p.nama+'!','success')}
+function doLogout(){stopStudyTimer();if(chatListenerRef){chatListenerRef.off();chatListenerRef=null}localStorage.clear();document.getElementById('login-overlay').style.display='flex';document.getElementById('topbar').style.display='none';document.getElementById('main-area').style.display='none';document.getElementById('login-nup').value='';document.getElementById('login-error').textContent='';currentView='home';currentFolderName=null}
+
+/* ===== PIN ===== */
+function pinKeypad(d){var i=document.getElementById('pin-input');if(i.value.length<6){i.value+=d;onPinInput(i)}}
+function pinBackspace(){var i=document.getElementById('pin-input');i.value=i.value.slice(0,-1);onPinInput(i)}
+function pinClear(){document.getElementById('pin-input').value='';document.getElementById('pin-error').textContent='';onPinInput(document.getElementById('pin-input'))}
+function onPinInput(inp){var dots=document.querySelectorAll('#pin-dots .pin-dot'),v=inp.value;for(var i=0;i<dots.length;i++){dots[i].className='pin-dot'+(i<v.length?' filled':'')}if(v.length===6){if(v===TRAINER_PIN){localStorage.setItem('trainer_unlocked','true');tutupModal('modal-pin-trainer');pendingTrainerAccess=false;switchView('admin',null)}else{document.getElementById('pin-error').textContent='PIN salah!';dots.forEach(function(d){d.className='pin-dot error'});setTimeout(pinClear,600)}}}
+function tutupModalPin(){tutupModal('modal-pin-trainer');if(pendingTrainerAccess){pendingTrainerAccess=false;renderSidebar()}}
+
+/* ===== ABSEN MANUAL ===== */
+function cekNUPDatabase(){var nv=document.getElementById('abs-nup').value.trim().toUpperCase(),err=document.getElementById('nup-error-msg'),c=document.getElementById('absen-data-container'),b=document.getElementById('btn-submit-absen');err.textContent='';if(!nv){err.textContent='Masukkan NUP';return}var p=databasePegawai[nv];if(!p){err.textContent='NUP tidak ditemukan';shakeEl(document.getElementById('abs-nup'));c.classList.add('opacity-60','pointer-events-none');b.disabled=true;b.className='flex-[2] bg-gray-300 text-gray-500 py-4 rounded-xl font-bold shadow-lg uppercase text-xs transition-all flex items-center justify-center gap-2 cursor-not-allowed';return}currentKaryawanData={nup:nv,nama:p.nama,unit:p.unit,role:p.role};document.getElementById('abs-nama').value=p.nama;document.getElementById('abs-unit').value=p.unit;c.classList.remove('opacity-60','pointer-events-none');b.disabled=false;b.className='flex-[2] bg-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg uppercase text-xs transition-all flex items-center justify-center gap-2 hover:bg-indigo-700 cursor-pointer';b.innerHTML='<i class="fas fa-paper-plane"></i> Kirim & Buka'}
+function prosesAbsen(){if(!currentKaryawanData||!db)return;var a={nup:currentKaryawanData.nup,nama:currentKaryawanData.nama,unit:currentKaryawanData.unit,role:currentKaryawanData.role,waktu:firebase.database.ServerValue.TIMESTAMP},b=document.getElementById('btn-submit-absen');b.disabled=true;b.innerHTML='<i class="fas fa-spinner fa-spin"></i> Memproses...';db.ref('absen/'+curId).push(a).then(function(){toast('Absen berhasil!','success');tutupModal('modal-absen');var m=allMateriData[curId];if(m)masukBelajar(curId,m)}).catch(function(e){toast('Gagal: '+e.message,'error');b.disabled=false;b.innerHTML='<i class="fas fa-paper-plane"></i> Kirim & Buka'})}
+
+/* ===== ADMIN CRUD ===== */
+function bukaModalTambahMateri(){document.getElementById('input-judul').value='';document.getElementById('input-folder').value='';document.getElementById('input-target-role').value='semua';document.getElementById('add-sessions-container').innerHTML='';document.getElementById('img-preview').style.display='none';document.getElementById('add-placeholder').classList.remove('hidden');document.getElementById('input-gambar').value='';tambahSesi('add-sessions-container');populateFolderDatalist('folder-datalist-add');bukaModal('modal-tambah')}
+function simpanMateriBaru(){var j=document.getElementById('input-judul').value.trim(),f=document.getElementById('input-folder').value.trim(),tr=document.getElementById('input-target-role').value;if(!j){toast('Judul harus diisi!','error');return}var sa=[];document.querySelectorAll('#add-sessions-container > div').forEach(function(d){var sj=d.querySelector('.sesi-judul').value.trim(),sl=d.querySelector('.sesi-link').value.trim();if(sj)sa.push({judul:sj,link:sl})});if(!sa.length){toast('Tambahkan minimal 1 sesi!','error');return}var btn=document.getElementById('btn-simpan-materi');btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Menyimpan...';var file=document.getElementById('input-gambar').files&&document.getElementById('input-gambar').files[0],data={judul:j,folder:f,targetRole:tr,sesi:sa,hidden:false,selesaiSesi:{},createdAt:firebase.database.ServerValue.TIMESTAMP};var done=function(){toast('Materi ditambahkan!','success');tutupModal('modal-tambah');btn.disabled=false;btn.innerHTML='<span>Simpan</span><i class="fas fa-save"></i>'};var fail=function(e){toast('Gagal: '+e.message,'error');btn.disabled=false;btn.innerHTML='<span>Simpan</span><i class="fas fa-save"></i>'};if(file){storageRef.ref('materi/'+Date.now()+'_'+file.name).put(file).then(function(s){return s.ref.getDownloadURL()}).then(function(u){data.gambar=u;return db.ref('materi').push(data)}).then(done).catch(fail)}else{data.gambar='';db.ref('materi').push(data).then(done).catch(fail)}}
+function bukaModalEdit(id){var m=allMateriData[id];if(!m)return;document.getElementById('edit-id').value=id;document.getElementById('input-edit-judul').value=m.judul||'';document.getElementById('input-edit-folder').value=m.folder||'';document.getElementById('input-edit-target-role').value=m.targetRole||'semua';document.getElementById('input-edit-hidden').checked=!!m.hidden;var c=document.getElementById('edit-sessions-container');c.innerHTML='';(m.sesi||[]).forEach(function(s){tambahSesi('edit-sessions-container');var ds=c.querySelectorAll(':scope > div'),ld=ds[ds.length-1];ld.querySelector('.sesi-judul').value=s.judul||'';ld.querySelector('.sesi-link').value=s.link||''});if(!(m.sesi||[]).length)tambahSesi('edit-sessions-container');var img=document.getElementById('img-preview-edit'),ph=document.getElementById('edit-placeholder');if(m.gambar){img.src=m.gambar;img.style.display='';ph.classList.add('hidden')}else{img.style.display='none';ph.classList.remove('hidden')}document.getElementById('input-edit-gambar').value='';populateFolderDatalist('folder-datalist-edit');bukaModal('modal-edit')}
+function updateMateri(){var id=document.getElementById('edit-id').value,m=allMateriData[id];if(!m||!db)return;var j=document.getElementById('input-edit-judul').value.trim(),f=document.getElementById('input-edit-folder').value.trim(),tr=document.getElementById('input-edit-target-role').value,h=document.getElementById('input-edit-hidden').checked;if(!j){toast('Judul harus diisi!','error');return}var sa=[];document.querySelectorAll('#edit-sessions-container > div').forEach(function(d){var sj=d.querySelector('.sesi-judul').value.trim(),sl=d.querySelector('.sesi-link').value.trim();if(sj)sa.push({judul:sj,link:sl})});var btn=document.getElementById('btn-update-materi');btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Mengupdate...';var file=document.getElementById('input-edit-gambar').files&&document.getElementById('input-edit-gambar').files[0],u={judul:j,folder:f,targetRole:tr,sesi:sa,hidden:h};var done=function(){toast('Materi diupdate!','success');tutupModal('modal-edit');btn.disabled=false;btn.innerHTML='<span>Update</span><i class="fas fa-sync-alt"></i>'};var fail=function(e){toast('Gagal: '+e.message,'error');btn.disabled=false;btn.innerHTML='<span>Update</span><i class="fas fa-sync-alt"></i>'};if(file){storageRef.ref('materi/'+Date.now()+'_'+file.name).put(file).then(function(s){return s.ref.getDownloadURL()}).then(function(url){u.gambar=url;return db.ref('materi/'+id).update(u)}).then(done).catch(fail)}else{db.ref('materi/'+id).update(u).then(done).catch(fail)}}
+function hapusMateri(id){if(!confirm('Hapus materi ini?'))return;db.ref('materi/'+id).remove().then(function(){toast('Dihapus.','info')}).catch(function(e){toast('Gagal','error')})}
+function toggleHidden(id){if(!db)return;var m=allMateriData[id];if(!m)return;db.ref('materi/'+id+'/hidden').set(!m.hidden).catch(function(){toast('Gagal','error')})}
+
+/* ===== ADMIN TABS ===== */
+function switchTabGuru(tab){currentGuruTab=tab;var tabs=['materi','hidden','waktu','nilai','absen','chat'];tabs.forEach(function(t){var b=document.getElementById('tab-g-'+t),c=document.getElementById('g-content-'+t);if(t===tab){b.className='flex-1 min-w-[80px] py-3 rounded-xl bg-white shadow-sm text-indigo-600 font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5';c.style.display=''}else{b.className='flex-1 min-w-[80px] py-3 rounded-xl text-gray-400 font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5';c.style.display='none'}});if(tab==='waktu')renderWaktuBelajar();if(tab==='nilai')renderNilai();if(tab==='absen')renderAbsen();if(tab==='chat')renderAdminChat()}
+
+/* ===== ADMIN RENDER MATERI ===== */
+function renderAdminMateri(){var el=document.getElementById('list-materi-admin'),keys=Object.keys(allMateriData),vis=keys.filter(function(id){return!allMateriData[id].hidden}),hid=keys.filter(function(id){return!!allMateriData[id].hidden});var hc=document.getElementById('hiddenCount');if(hid.length>0){hc.style.display='';hc.textContent=hid.length}else{hc.style.display='none'}el.innerHTML=vis.length?vis.map(function(id){return renderAdminCard(id,allMateriData[id])}).join(''):'<div class="col-span-full text-center py-12 text-gray-400"><i class="fas fa-book text-3xl mb-3"></i><p class="text-sm">Belum ada materi.</p></div>';var eH=document.getElementById('list-materi-hidden'),emH=document.getElementById('emptyHidden');if(!hid.length){eH.innerHTML='';emH.style.display=''}else{emH.style.display='none';eH.innerHTML=hid.map(function(id){return renderAdminCard(id,allMateriData[id],true)}).join('')}}
+function renderAdminCard(id,m,ih){var g=getGradient(m.judul||id),ri=getRoleInfo(m.targetRole),ft=m.folder?'<div class="flex items-center gap-1.5 text-[9px] text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200"><i class="fas fa-folder text-[8px]"></i>'+m.folder+'</div>':'',ts=(m.sesi||[]).length;return '<div class="bg-white rounded-xl border overflow-hidden shadow-sm hover:shadow-md transition-all animate-fade-in"><div class="relative h-28 overflow-hidden" style="background:'+g+'">'+(m.gambar?'<img src="'+m.gambar+'" class="w-full h-full object-cover" onerror="this.style.display=\'none\'">':'')+(ih?'<div class="absolute inset-0 bg-black/50 flex items-center justify-center"><span class="bg-red-500 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase"><i class="fas fa-eye-slash mr-1"></i>Hidden</span></div>':'')+'</div><div class="p-3"><div class="flex items-center gap-2 mb-1 flex-wrap">'+ft+'<span class="text-[9px] font-black uppercase px-2 py-0.5 rounded-full '+ri.cls+'"><i class="fas '+ri.icon+' mr-0.5"></i>'+ri.label+'</span></div><h4 class="font-bold text-sm text-gray-900 truncate">'+(m.judul||'Tanpa Judul')+'</h4><p class="text-[10px] text-gray-400 mt-1">'+ts+' sesi</p><div class="flex gap-1.5 mt-3"><button onclick="bukaModalEdit(\''+id+'\')" type="button" class="flex-1 bg-indigo-50 text-indigo-600 py-2 rounded-lg text-[10px] font-bold hover:bg-indigo-100"><i class="fas fa-edit mr-1"></i>Edit</button><button onclick="toggleHidden(\''+id+'\')" type="button" class="px-3 py-2 rounded-lg text-[10px] font-bold '+(ih?'bg-emerald-50 text-emerald-600 hover:bg-emerald-100':'bg-amber-50 text-amber-600 hover:bg-amber-100')+'"><i class="fas '+(ih?'fa-eye':'fa-eye-slash')+'"></i></button><button onclick="hapusMateri(\''+id+'\')" type="button" class="px-3 py-2 rounded-lg text-[10px] font-bold bg-red-50 text-red-500 hover:bg-red-100"><i class="fas fa-trash-alt"></i></button></div></div></div>'}
+
+/* ===== ADMIN WAKTU ===== */
+function renderWaktuBelajar(){var fm=document.getElementById('filter-waktu-materi'),cv=fm.value;fm.innerHTML='<option value="all">Semua Materi</option>';Object.keys(allMateriData).forEach(function(id){var o=document.createElement('option');o.value=id;o.textContent=allMateriData[id].judul||id;fm.appendChild(o)});fm.value=cv||'all';filterWaktuBelajar()}
+function filterWaktuBelajar(){var fm=(document.getElementById('filter-waktu-materi')||{}).value||'all',sb=(document.getElementById('filter-waktu-sort')||{}).value||'terlama',el=document.getElementById('waktu-belajar-list'),ee=document.getElementById('emptyWaktu'),en=[];var mids=fm==='all'?Object.keys(allStudyTimeData):[fm];mids.forEach(function(mid){var st=allStudyTimeData[mid];if(!st)return;var mj=(allMateriData[mid]||{}).judul||mid;Object.keys(st).forEach(function(nup){var d=st[nup];en.push({materiId:mid,materiJudul:mj,nup:nup,nama:d.nama||'-',unit:d.unit||'-',totalDetik:d.totalDetik||0,sesiCount:d.sesiCount||0,lastSeen:d.lastSeen||0})})});if(!en.length){el.innerHTML='';ee.style.display='';return}ee.style.display='none';en.sort(function(a,b){if(sb==='terbaru')return b.lastSeen-a.lastSeen;if(sb==='terlama')return a.lastSeen-b.lastSeen;if(sb==='terbaru_total')return b.totalDetik-a.totalDetik;return a.totalDetik-b.totalDetik});el.innerHTML=en.map(function(e){var m=Math.floor(e.totalDetik/60),dc=m>30?'bg-emerald-400':(m>10?'bg-amber-400':'bg-red-400'),lt=e.lastSeen?new Date(e.lastSeen).toLocaleString('id-ID',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'-';return '<div class="bg-white rounded-xl border p-4 flex items-center gap-4 hover:shadow-sm transition-all cursor-pointer" onclick="showDetailWaktu(\''+e.materiId+'\',\''+e.nup+'\')"><div class="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-black '+(m>30?'bg-emerald-500':(m>10?'bg-amber-500':'bg-red-500'))+'">'+(e.nama||'?').charAt(0).toUpperCase()+'</div><div class="flex-1 min-w-0"><p class="font-bold text-sm text-gray-900 truncate">'+e.nama+'</p><p class="text-[10px] text-gray-400">'+e.nup+' &bull; '+e.unit+'</p><p class="text-[10px] text-indigo-500 font-bold mt-0.5">'+e.materiJudul+'</p></div><div class="text-right flex-shrink-0"><p class="font-black text-sm">'+formatDetikLabel(e.totalDetik)+'</p><p class="text-[9px] text-gray-400 mt-1">'+lt+'</p><div class="flex items-center justify-end gap-1.5 mt-1"><span class="w-2.5 h-2.5 rounded-full '+dc+'"></span><span class="text-[9px] font-bold text-gray-500">'+e.sesiCount+'x</span></div></div></div>'}).join('')}
+function showDetailWaktu(mid,nup){var st=allStudyTimeData[mid];if(!st||!st[nup])return;var d=st[nup];document.getElementById('detail-waktu-subtitle').textContent=d.nama+' ('+nup+') - '+((allMateriData[mid]||{}).judul||mid);document.getElementById('detail-waktu-total').textContent=formatDetikLabel(d.totalDetik||0);document.getElementById('detail-waktu-content').innerHTML='<div class="bg-gray-50 rounded-xl p-4 border"><div class="grid grid-cols-2 gap-4 text-sm"><div><p class="text-[10px] font-bold text-gray-400 uppercase">Total Waktu</p><p class="font-black">'+formatDetikLabel(d.totalDetik||0)+'</p></div><div><p class="text-[10px] font-bold text-gray-400 uppercase">Jumlah Sesi</p><p class="font-black">'+(d.sesiCount||0)+'</p></div><div><p class="text-[10px] font-bold text-gray-400 uppercase">Sesi Terakhir</p><p class="font-black">'+formatDetikLabel(d.sesiTerakhir||0)+'</p></div><div><p class="text-[10px] font-bold text-gray-400 uppercase">Terakhir Seen</p><p class="font-black">'+(d.lastSeen?new Date(d.lastSeen).toLocaleString('id-ID'):'-')+'</p></div></div></div>';bukaModal('modal-detail-waktu')}
+
+/* ===== ADMIN NILAI/ABSEN/CHAT ===== */
+function renderNilai(){var tb=document.getElementById('tabel-laporan'),rs=[];Object.keys(allLaporanData).forEach(function(mid){var mj=(allMateriData[mid]||{}).judul||mid;Object.keys(allLaporanData[mid]).forEach(function(nup){var d=allLaporanData[mid][nup];rs.push({mj:mj,nama:d.nama||'-',nup:d.nup||nup,unit:d.unit||'-',role:d.role||'-',nilai:d.nilai||0,mid:mid,nk:nup})})});if(!rs.length){tb.innerHTML='<tr><td colspan="7" class="p-6 text-center text-gray-400 text-sm">Belum ada data.</td></tr>';return}tb.innerHTML=rs.map(function(r){var ri=getRoleInfo(r.role);return '<tr class="hover:bg-gray-50"><td class="p-3 font-bold text-sm">'+r.nama+'</td><td class="p-3 text-xs text-gray-500">'+r.nup+'</td><td class="p-3 text-xs text-gray-500">'+r.unit+'</td><td class="p-3"><span class="text-[9px] font-black uppercase px-2 py-0.5 rounded-full '+ri.cls+'">'+ri.label+'</span></td><td class="p-3 text-xs text-center">'+r.mj+'</td><td class="p-3 text-center"><span class="bg-emerald-50 text-emerald-700 font-black px-3 py-1 rounded-full text-sm">'+r.nilai+'</span></td><td class="p-3 text-right"><button onclick="hapusLaporan(\''+r.mid+'\',\''+r.nk+'\')" type="button" class="text-red-400 hover:text-red-600 text-xs"><i class="fas fa-trash-alt"></i></button></td></tr>'}).join('')}
+function hapusLaporan(m,n){if(!confirm('Hapus?'))return;db.ref('laporan/'+m+'/'+n).remove().then(function(){toast('Dihapus.','info')}).catch(function(){toast('Gagal','error')})}
+function renderAbsen(){var tb=document.getElementById('tabel-absensi'),rs=[];Object.keys(allAbsenData).forEach(function(mid){var mj=(allMateriData[mid]||{}).judul||mid;Object.keys(allAbsenData[mid]).forEach(function(k){var d=allAbsenData[mid][k];rs.push({mj:mj,nama:d.nama||'-',nup:d.nup||'-',unit:d.unit||'-',role:d.role||'-',waktu:d.waktu||0,mid:mid,ak:k})})});if(!rs.length){tb.innerHTML='<tr><td colspan="7" class="p-6 text-center text-gray-400 text-sm">Belum ada data.</td></tr>';return}rs.sort(function(a,b){return b.waktu-a.waktu});tb.innerHTML=rs.map(function(r){var ri=getRoleInfo(r.role),t=r.waktu?new Date(r.waktu).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'-';return '<tr class="hover:bg-gray-50"><td class="p-3 font-bold text-sm">'+r.nama+'</td><td class="p-3 text-xs text-gray-500">'+r.nup+'</td><td class="p-3 text-xs text-gray-500">'+r.unit+'</td><td class="p-3"><span class="text-[9px] font-black uppercase px-2 py-0.5 rounded-full '+ri.cls+'">'+ri.label+'</span></td><td class="p-3 text-xs">'+r.mj+'</td><td class="p-3 text-xs text-gray-500">'+t+'</td><td class="p-3 text-right"><button onclick="hapusAbsen(\''+r.mid+'\',\''+r.ak+'\')" type="button" class="text-red-400 hover:text-red-600 text-xs"><i class="fas fa-trash-alt"></i></button></td></tr>'}).join('')}
+function hapusAbsen(m,k){if(!confirm('Hapus?'))return;db.ref('absen/'+m+'/'+k).remove().then(function(){toast('Dihapus.','info')}).catch(function(){toast('Gagal','error')})}
+function renderAdminChat(){var el=document.getElementById('admin-chat-list'),en=[];Object.keys(allChatData).forEach(function(mid){var mj=(allMateriData[mid]||{}).judul||mid,ms=allChatData[mid],ks=Object.keys(ms);if(!ks.length)return;var l=ms[ks[ks.length-1]];en.push({mid:mid,mj:mj,total:ks.length,lm:(l.pesan||'').substring(0,60),ln:l.nama||'-',lt:l.timestamp||0})});en.sort(function(a,b){return b.lt-a.lt});if(!en.length){el.innerHTML='<div class="text-center py-12 text-gray-400 text-sm">Belum ada diskusi.</div>';return}el.innerHTML=en.map(function(e){var t=e.lt?new Date(e.lt).toLocaleString('id-ID',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'-';return '<div class="bg-white rounded-xl border p-4 flex items-center gap-4 hover:shadow-sm transition-all cursor-pointer" onclick="navTo(\'home\');setTimeout(function(){openMateri(\''+e.mid+'\')},200)"><div class="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600"><i class="fas fa-comments"></i></div><div class="flex-1 min-w-0"><p class="font-bold text-sm text-gray-900 truncate">'+e.mj+'</p><p class="text-[10px] text-gray-400 truncate"><span class="font-bold text-gray-500">'+e.ln+':</span> '+e.lm+'</p></div><div class="text-right flex-shrink-0"><span class="bg-indigo-50 text-indigo-600 text-[10px] font-black px-2 py-0.5 rounded-full">'+e.total+' pesan</span><p class="text-[9px] text-gray-400 mt-1">'+t+'</p></div></div>'}).join('')}
+
+/* ===== EXCEL ===== */
+function downloadExcel(){var rs=[];Object.keys(allAbsenData).forEach(function(mid){var mj=(allMateriData[mid]||{}).judul||mid;Object.keys(allAbsenData[mid]).forEach(function(k){var d=allAbsenData[mid][k];rs.push({Nama:d.nama||'-',NUP:d.nup||'-',Unit:d.unit||'-',Grup:d.role||'-',Materi:mj,Waktu:d.waktu?new Date(d.waktu).toLocaleString('id-ID'):'-'})})});if(!rs.length){toast('Tidak ada data.','warn');return}var ws=XLSX.utils.json_to_sheet(rs),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Absensi');XLSX.writeFile(wb,'Absensi_BKI_Classroom.xlsx');toast('Excel diunduh!','success')}
+function downloadExcelWaktu(){var rs=[];Object.keys(allStudyTimeData).forEach(function(mid){var mj=(allMateriData[mid]||{}).judul||mid;Object.keys(allStudyTimeData[mid]).forEach(function(nup){var d=allStudyTimeData[mid][nup];rs.push({Nama:d.nama||'-',NUP:nup,Unit:d.unit||'-',Materi:mj,'Total Detik':d.totalDetik||0,'Total Waktu':formatDetikLabel(d.totalDetik||0),'Jumlah Sesi':d.sesiCount||0,'Terakhir':d.lastSeen?new Date(d.lastSeen).toLocaleString('id-ID'):'-'})})});if(!rs.length){toast('Tidak ada data.','warn');return}var ws=XLSX.utils.json_to_sheet(rs),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Waktu');XLSX.writeFile(wb,'Waktu_BKI_Classroom.xlsx');toast('Excel diunduh!','success')}
+
+/* ===== LOAD ALL ===== */
+function loadAllData(){if(!db)return;db.ref('materi').on('value',function(s){allMateriData=s.val()||{};renderSidebar();if(currentView==='home')renderHomeView();else if(currentView==='folder')renderFolderView(currentFolderName);else if(isTrainerMode()&&currentView==='admin')renderAdminMateri()});db.ref('studyTime').on('value',function(s){allStudyTimeData=s.val()||{};if(isTrainerMode()&&currentView==='admin'&&currentGuruTab==='waktu')filterWaktuBelajar()});db.ref('absen').on('value',function(s){allAbsenData=s.val()||{};if(isTrainerMode()&&currentView==='admin'&&currentGuruTab==='absen')renderAbsen()});db.ref('laporan').on('value',function(s){allLaporanData=s.val()||{};if(isTrainerMode()&&currentView==='admin'&&currentGuruTab==='nilai')renderNilai()});db.ref('chat').on('value',function(s){allChatData=s.val()||{};if(isTrainerMode()&&currentView==='admin'&&currentGuruTab==='chat')renderAdminChat()})}
+
+/* ===== INIT ===== */
+(function(){var nup=localStorage.getItem('user_nup');if(nup&&databasePegawai[nup]){document.getElementById('login-overlay').style.display='none';document.getElementById('topbar').style.display='';document.getElementById('main-area').style.display='';currentView='home';loadAllData()}else{document.getElementById('login-overlay').style.display='flex';localStorage.clear()}})();
+</script>
+</body>
+</html>
