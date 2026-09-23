@@ -28,8 +28,8 @@
         .sidebar-nav-item{display:flex;align-items:center;gap:12px;padding:10px 20px;cursor:pointer;color:#4b5563;font-size:13px;font-weight:600;border-left:4px solid transparent}
         .sidebar-nav-item:hover{background:#f3f4f6;color:#111827}
         .sidebar-nav-item.active{background:#eef2ff;color:#4f46e5;border-left-color:#4f46e5}
-        .main-area{margin-left:260px;min-height:100vh;padding-top:76px}
-        @media(max-width:768px){.sidebar{transform:translateX(-100%);top:0;z-index:50}.sidebar.open{transform:translateX(0)}.main-area{margin-left:0;padding-top:76px}}
+        .main-area{margin-left:260px;min-height:calc(100vh - 56px);padding-top:56px;box-sizing:border-box;transition:margin-left .25s ease}
+        @media(max-width:768px){.sidebar{transform:translateX(-100%);top:0;z-index:50}.sidebar.open{transform:translateX(0)}.main-area{margin-left:0;padding-top:56px}}
         .badge-reguler{background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc}
         .badge-umum{background:#fef3c7;color:#92400e;border:1px solid #fcd34d}
         .badge-trainer{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
@@ -139,7 +139,8 @@
 </aside>
 
 <!-- ==================== MAIN CONTENT AREA ==================== -->
-<main id="main-area" class="main-area pt-20 md:pt-24 px-4 sm:px-6 md:px-8 pb-16 max-w-7xl mx-auto" style="display:none">
+<main id="main-area" class="main-area" style="display:none">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-8 pb-16 w-full">
 
     <!-- VIEW: BERANDA -->
     <section id="view-home" class="space-y-8 animate-fade-in">
@@ -394,6 +395,7 @@
             <div id="emptyWaktu" style="display:none" class="text-center py-12 text-slate-400 text-xs">Belum ada catatan durasi waktu belajar.</div>
         </div>
     </section>
+    </div>
 </main>
 
 <!-- ==================== MODAL BUKA KUNCI FOLDER (PESERTA / TRAINER LAIN) ==================== -->
@@ -1763,9 +1765,9 @@ var databasePegawai = window.databasePegawai || {
 var DAFTAR_TRAINER = [
     { nup: 'TRAINER-01', nama: 'Trainer 01', pin: 'ppsdm01', role: 'trainer', spesialis: 'Pengajar 01' },
     { nup: 'TRAINER-02', nama: 'Trainer 02', pin: 'ppsdm02', role: 'trainer', spesialis: 'Pengajar 02' },
-    { nup: 'TRAINER-03', nama: 'Trainer 03', pin: 'ppsdm03', role: 'trainer', spesialis: 'Pengajar 03' },
-    { nup: 'TRAINER-04', nama: 'Trainer 04', pin: 'ppsdm04', role: 'trainer', spesialis: 'Pengajar 04' },
-    { nup: 'TRAINER-05', nama: 'Trainer 05', pin: 'ppsdm05', role: 'trainer', spesialis: 'Pengajar 05' },
+    { nup: 'TRAINER-03', nama: 'Trainer 03', pin: '330303', role: 'trainer', spesialis: 'Pengajar 03' },
+    { nup: 'TRAINER-04', nama: 'Trainer 04', pin: '440404', role: 'trainer', spesialis: 'Pengajar 04' },
+    { nup: 'TRAINER-05', nama: 'Trainer 05', pin: '550505', role: 'trainer', spesialis: 'Pengajar 05' },
     { nup: 'DIKLAT-ADMIN', nama: 'Administrator Utama', pin: '000000', role: 'superadmin', spesialis: 'Super Admin Diklat PPSDM' }
 ];
 
@@ -2082,6 +2084,14 @@ function navTo(v, folder) {
     document.getElementById('view-' + v).style.display = '';
 
     renderSidebar();
+    if (window.innerWidth < 768) {
+        var sb = document.getElementById('sidebar');
+        var bd = document.getElementById('sidebar-backdrop');
+        if (sb && sb.classList.contains('open')) {
+            sb.classList.remove('open');
+            if (bd) bd.classList.add('hidden');
+        }
+    }
     if (v === 'home') renderHomeView();
     if (v === 'folder') renderFolderView(currentFolderName);
     if (v === 'admin') renderAdminMateri();
