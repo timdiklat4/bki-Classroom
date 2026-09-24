@@ -47,7 +47,7 @@
                 <i class="fas fa-graduation-cap"></i>
             </div>
             <h1 class="text-2xl font-black text-slate-900 tracking-tight">bki Classroom</h1>
-            <p class="text-xs font-semibold text-indigo-600 uppercase tracking-widest mt-1">Platform Pembelajaran Internal bki</p>
+            <p class="text-xs font-semibold text-indigo-600 uppercase tracking-widest mt-1">Platform Diklat PPSDM</p>
         </div>
 
         <div class="flex bg-slate-100 p-1 rounded-xl mb-5 text-xs font-bold">
@@ -343,27 +343,50 @@
         <!-- TAB 3: NILAI -->
         <div id="g-content-nilai" style="display:none" class="bg-white rounded-3xl border border-slate-200 p-6 space-y-4">
             <div class="flex items-center justify-between flex-wrap gap-3">
-                <div class="relative flex-1 min-w-[200px]">
-                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                    <input id="cari-nilai" oninput="renderNilai()" type="text" placeholder="Cari nama, NUP, atau materi..." class="w-full pl-8 pr-4 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none focus:border-indigo-600">
+                <div class="relative flex-1 min-w-[240px]">
+                    <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input id="cari-nilai" oninput="renderNilai()" type="text" placeholder="Cari nama, NUP, materi, atau sesi..." class="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none focus:border-indigo-600 transition-all">
                 </div>
-                <button onclick="bukaModalInputNilai()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors uppercase">
-                    <i class="fas fa-plus"></i> Input Nilai Manual
-                </button>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <div class="flex bg-slate-100 p-1 rounded-xl text-xs font-bold border border-slate-200/60">
+                        <button type="button" id="tab-nilai-persesi" onclick="setNilaiViewMode('persesi')" class="py-2 px-3.5 rounded-lg bg-white shadow-xs text-indigo-700 font-black transition-all flex items-center gap-1.5">
+                            <i class="fas fa-list-ol text-xs text-indigo-600"></i>
+                            <span>Per Sesi (Detail)</span>
+                        </button>
+                        <button type="button" id="tab-nilai-permateri" onclick="setNilaiViewMode('permateri')" class="py-2 px-3.5 rounded-lg text-slate-500 hover:text-slate-900 transition-all flex items-center gap-1.5">
+                            <i class="fas fa-layer-group text-xs"></i>
+                            <span>Ringkasan Materi</span>
+                        </button>
+                    </div>
+                    <button onclick="bukaModalInputNilai()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors uppercase shadow-xs">
+                        <i class="fas fa-plus"></i> Input Nilai Manual
+                    </button>
+                </div>
             </div>
-            <div class="overflow-x-auto rounded-xl border border-slate-200">
+
+            <!-- Filter Bar & Summary Counter -->
+            <div class="flex items-center justify-between flex-wrap gap-3 bg-slate-50/80 p-3 rounded-2xl border border-slate-200 text-xs">
+                <div class="flex items-center gap-2.5 flex-wrap">
+                    <span class="text-[11px] font-black uppercase text-slate-500 tracking-wider flex items-center gap-1">
+                        <i class="fas fa-filter text-indigo-500"></i> Filter:
+                    </span>
+                    <select id="filter-nilai-materi" onchange="renderNilai()" class="border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-semibold bg-white outline-none focus:border-indigo-500 text-slate-700">
+                        <option value="all">Semua Materi</option>
+                    </select>
+                    <select id="filter-nilai-status" onchange="renderNilai()" class="border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-semibold bg-white outline-none focus:border-indigo-500 text-slate-700">
+                        <option value="all">Semua Status Sesi</option>
+                        <option value="done">Hanya Selesai (✓)</option>
+                        <option value="pending">Hanya Belum Selesai (○)</option>
+                    </select>
+                </div>
+                <div id="nilai-counter-label" class="text-xs font-bold text-slate-500">
+                    Memuat data...
+                </div>
+            </div>
+
+            <div class="overflow-x-auto rounded-2xl border border-slate-200">
                 <table class="w-full text-left text-xs">
-                    <thead class="bg-slate-50 text-[10px] uppercase font-black text-slate-500 border-b border-slate-200">
-                        <tr>
-                            <th class="p-3">Nama Pegawai</th>
-                            <th class="p-3">NUP</th>
-                            <th class="p-3">Unit</th>
-                            <th class="p-3">Kategori</th>
-                            <th class="p-3">Materi</th>
-                            <th class="p-3 text-center">Nilai</th>
-                            <th class="p-3 text-right">Aksi</th>
-                        </tr>
-                    </thead>
+                    <thead id="tabel-laporan-thead" class="bg-slate-50 text-[10px] uppercase font-black text-slate-500 border-b border-slate-200"></thead>
                     <tbody id="tabel-laporan" class="divide-y divide-slate-100"></tbody>
                 </table>
             </div>
@@ -1760,14 +1783,13 @@ var databasePegawai = window.databasePegawai || {
 "51038":{nama:"SABRINA HARIYANI",unit:"CABANG PRATAMA KOMERSIAL PALEMBANG",role:"umum"},
 "51042":{nama:"RISMAN GURIUM",unit:"CABANG PRATAMA KLAS AMBON",role:"umum"}
 };
-
 /* ==================== SISTEM AUTENTIKASI & AKUN TRAINER UNIK ==================== */
 var DAFTAR_TRAINER = [
-    { nup: 'TRAINER-01', nama: 'Trainer 01', pin: 'ppsdm01', role: 'trainer', spesialis: 'Pengajar 01' },
-    { nup: 'TRAINER-02', nama: 'Trainer 02', pin: 'ppsdm02', role: 'trainer', spesialis: 'Pengajar 02' },
-    { nup: 'TRAINER-03', nama: 'Trainer 03', pin: 'ppsdm03', role: 'trainer', spesialis: 'Pengajar 03' },
-    { nup: 'TRAINER-04', nama: 'Trainer 04', pin: 'ppsdm04', role: 'trainer', spesialis: 'Pengajar 04' },
-    { nup: 'TRAINER-05', nama: 'Trainer 05', pin: 'ppsdm05', role: 'trainer', spesialis: 'Pengajar 05' },
+    { nup: 'TRAINER-01', nama: 'Trainer 01', pin: '110101', role: 'trainer', spesialis: 'Pengajar 01' },
+    { nup: 'TRAINER-02', nama: 'Trainer 02', pin: '220202', role: 'trainer', spesialis: 'Pengajar 02' },
+    { nup: 'TRAINER-03', nama: 'Trainer 03', pin: '330303', role: 'trainer', spesialis: 'Pengajar 03' },
+    { nup: 'TRAINER-04', nama: 'Trainer 04', pin: '440404', role: 'trainer', spesialis: 'Pengajar 04' },
+    { nup: 'TRAINER-05', nama: 'Trainer 05', pin: '550505', role: 'trainer', spesialis: 'Pengajar 05' },
     { nup: 'DIKLAT-ADMIN', nama: 'Administrator Utama', pin: '000000', role: 'superadmin', spesialis: 'Super Admin Diklat PPSDM' }
 ];
 
@@ -3366,41 +3388,378 @@ function hapusMateri(id) {
 }
 
 /* ==================== TABEL NILAI, ABSEN, WAKTU ==================== */
+var nilaiViewMode = 'persesi'; // 'persesi' atau 'permateri'
+
+function setNilaiViewMode(m) {
+    nilaiViewMode = m;
+    var btnSesi = document.getElementById('tab-nilai-persesi');
+    var btnMateri = document.getElementById('tab-nilai-permateri');
+    if (btnSesi && btnMateri) {
+        if (m === 'persesi') {
+            btnSesi.className = 'py-2 px-3.5 rounded-lg bg-white shadow-xs text-indigo-700 font-black transition-all flex items-center gap-1.5';
+            btnMateri.className = 'py-2 px-3.5 rounded-lg text-slate-500 hover:text-slate-900 transition-all flex items-center gap-1.5';
+        } else {
+            btnSesi.className = 'py-2 px-3.5 rounded-lg text-slate-500 hover:text-slate-900 transition-all flex items-center gap-1.5';
+            btnMateri.className = 'py-2 px-3.5 rounded-lg bg-white shadow-xs text-indigo-700 font-black transition-all flex items-center gap-1.5';
+        }
+    }
+    renderNilai();
+}
+
+function updateNilaiMateriFilterOptions() {
+    var sel = document.getElementById('filter-nilai-materi');
+    if (!sel) return;
+    var curVal = sel.value || 'all';
+    var mids = Object.keys(allMateriData || {});
+    var opts = '<option value="all">Semua Materi</option>';
+    mids.forEach(function(mid) {
+        var m = allMateriData[mid];
+        if (m && m.judul) {
+            opts += '<option value="' + mid + '" ' + (curVal === mid ? 'selected' : '') + '>' + m.judul + '</option>';
+        }
+    });
+    sel.innerHTML = opts;
+}
+
+function toggleSesiStatusTrainer(mid, nup, idx, currentStatus) {
+    var newStatus = !currentStatus;
+    var m = allMateriData[mid] || {};
+    var sesiList = (Array.isArray(m.sesi) && m.sesi.length > 0) ? m.sesi : [{ judul: m.judul || 'Sesi Utama', link: '' }];
+    var sTitle = (sesiList[idx] && sesiList[idx].judul) || ('Sesi ' + (idx + 1));
+    
+    db.ref('materi/' + mid + '/selesaiSesi/' + nup + '/' + idx).set(newStatus).then(function() {
+        toast('Status ' + sTitle + ' (NUP ' + nup + '): ' + (newStatus ? 'Selesai' : 'Belum Selesai'), 'success');
+        
+        // Cek jika seluruh sesi sudah selesai, otomatis catat ke laporan
+        var us = (m.selesaiSesi && m.selesaiSesi[nup]) || {};
+        us[idx] = newStatus;
+        var allDone = sesiList.length > 0 && sesiList.every(function(_, i) { return !!us[i]; });
+        if (allDone) {
+            var dbPeg = window.databasePegawai || {};
+            var peg = dbPeg[nup] || { nama: 'Peserta ' + nup, unit: '-', role: 'umum' };
+            db.ref('laporan/' + mid + '/' + nup).set({
+                nama: peg.nama, nup: nup, unit: peg.unit, role: peg.role, nilai: 100, waktu: firebase.database.ServerValue.TIMESTAMP
+            });
+        }
+        renderNilai();
+    });
+}
+
 function renderNilai() {
     var tb = document.getElementById('tabel-laporan');
+    var thead = document.getElementById('tabel-laporan-thead');
+    var counterLabel = document.getElementById('nilai-counter-label');
+    if (!tb) return;
+
+    updateNilaiMateriFilterOptions();
+
     var q = ((document.getElementById('cari-nilai') || {}).value || '').toLowerCase().trim();
-    var rows = [];
-    Object.keys(allLaporanData).forEach(function(mid) {
-        var m = allMateriData[mid] || {};
-        Object.keys(allLaporanData[mid]).forEach(function(nup) {
-            var d = allLaporanData[mid][nup];
-            var txt = (d.nama + ' ' + nup + ' ' + (m.judul || '')).toLowerCase();
-            if (q && !txt.includes(q)) return;
-            rows.push({ mid: mid, nup: nup, nama: d.nama, unit: d.unit, role: d.role, nilai: d.nilai, judul: m.judul || mid });
+    var filterMateri = ((document.getElementById('filter-nilai-materi') || {}).value || 'all');
+    var filterStatus = ((document.getElementById('filter-nilai-status') || {}).value || 'all');
+
+    // 1. Atur Table Header sesuai mode
+    if (thead) {
+        if (nilaiViewMode === 'persesi') {
+            thead.innerHTML = '<tr>' +
+                '<th class="p-3 whitespace-nowrap">Nama Pegawai</th>' +
+                '<th class="p-3 whitespace-nowrap">NUP</th>' +
+                '<th class="p-3 whitespace-nowrap">Unit</th>' +
+                '<th class="p-3 whitespace-nowrap">Kategori</th>' +
+                '<th class="p-3">Materi</th>' +
+                '<th class="p-3">Sesi Pembelajaran</th>' +
+                '<th class="p-3 text-center whitespace-nowrap">Status Sesi</th>' +
+                '<th class="p-3 text-center whitespace-nowrap">Nilai / Progres</th>' +
+                '<th class="p-3 text-right whitespace-nowrap">Aksi</th>' +
+                '</tr>';
+        } else {
+            thead.innerHTML = '<tr>' +
+                '<th class="p-3 whitespace-nowrap">Nama Pegawai</th>' +
+                '<th class="p-3 whitespace-nowrap">NUP</th>' +
+                '<th class="p-3 whitespace-nowrap">Unit</th>' +
+                '<th class="p-3 whitespace-nowrap">Kategori</th>' +
+                '<th class="p-3">Materi & Rincian Sesi</th>' +
+                '<th class="p-3 text-center whitespace-nowrap">Progres Sesi</th>' +
+                '<th class="p-3 text-center whitespace-nowrap">Nilai</th>' +
+                '<th class="p-3 text-right whitespace-nowrap">Aksi</th>' +
+                '</tr>';
+        }
+    }
+
+    // 2. Kumpulkan seluruh pasangan peserta (mid & nup) yang mengakses materi
+    var userMidMap = {};
+
+    // a. Dari allLaporanData
+    Object.keys(allLaporanData || {}).forEach(function(mid) {
+        Object.keys(allLaporanData[mid] || {}).forEach(function(nup) {
+            userMidMap[mid + '___' + nup] = { mid: mid, nup: nup };
         });
     });
 
-    if (!rows.length) {
-        tb.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-slate-400">Belum ada data nilai peserta.</td></tr>';
+    // b. Dari allMateriData selesaiSesi (progres per sesi langsung)
+    Object.keys(allMateriData || {}).forEach(function(mid) {
+        var m = allMateriData[mid];
+        if (m && m.selesaiSesi) {
+            Object.keys(m.selesaiSesi).forEach(function(nup) {
+                userMidMap[mid + '___' + nup] = { mid: mid, nup: nup };
+            });
+        }
+    });
+
+    // c. Dari allStudyTimeData
+    Object.keys(allStudyTimeData || {}).forEach(function(mid) {
+        Object.keys(allStudyTimeData[mid] || {}).forEach(function(nup) {
+            userMidMap[mid + '___' + nup] = { mid: mid, nup: nup };
+        });
+    });
+
+    var keys = Object.keys(userMidMap);
+    if (!keys.length) {
+        tb.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-slate-400 font-semibold">Belum ada data materi yang diakses peserta.</td></tr>';
+        if (counterLabel) counterLabel.textContent = '0 data';
         return;
     }
-    tb.innerHTML = rows.map(function(r) {
-        return '<tr class="hover:bg-slate-50">' +
-            '<td class="p-3 font-bold text-slate-900">' + r.nama + '</td>' +
-            '<td class="p-3 font-mono text-slate-500">' + r.nup + '</td>' +
-            '<td class="p-3 text-slate-500">' + r.unit + '</td>' +
-            '<td class="p-3"><span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase badge-' + (r.role || 'umum') + '">' + (r.role || 'umum').toUpperCase() + '</span></td>' +
-            '<td class="p-3 font-bold text-indigo-700">' + r.judul + '</td>' +
-            '<td class="p-3 text-center font-black text-sm ' + (r.nilai >= 75 ? 'text-emerald-600' : 'text-amber-600') + '">' + r.nilai + '</td>' +
-            '<td class="p-3 text-right"><button onclick="hapusNilai(\'' + r.mid + '\',\'' + r.nup + '\')" class="text-rose-500 hover:text-rose-700 text-xs"><i class="fas fa-trash-alt"></i></button></td>' +
-            '</tr>';
-    }).join('');
+
+    var dbPeg = window.databasePegawai || {};
+
+    if (nilaiViewMode === 'persesi') {
+        // MODE PER SESI: 1 Baris per Sesi Materi per Peserta
+        var sessionRows = [];
+
+        keys.forEach(function(k) {
+            var item = userMidMap[k];
+            var mid = item.mid;
+            var nup = item.nup;
+            if (filterMateri !== 'all' && mid !== filterMateri) return;
+
+            var m = allMateriData[mid] || {};
+            var mJudul = m.judul || mid;
+            var lap = (allLaporanData[mid] && allLaporanData[mid][nup]) || null;
+            var peg = dbPeg[nup] || {};
+
+            var nama = (lap && lap.nama) || peg.nama || ((allAbsenData[mid] && allAbsenData[mid][nup]) || {}).nama || 'Pegawai ' + nup;
+            var unit = (lap && lap.unit) || peg.unit || ((allAbsenData[mid] && allAbsenData[mid][nup]) || {}).unit || '-';
+            var role = (lap && lap.role) || peg.role || ((allAbsenData[mid] && allAbsenData[mid][nup]) || {}).role || 'umum';
+
+            var sesiList = (Array.isArray(m.sesi) && m.sesi.length > 0) ? m.sesi : [{ judul: mJudul, link: '' }];
+            var us = (m.selesaiSesi && m.selesaiSesi[nup]) || {};
+
+            // Hitung total selesai untuk peserta di materi ini
+            var doneCount = 0;
+            sesiList.forEach(function(s, idx) {
+                var isDone = !!us[idx];
+                if (!isDone && lap && Number(lap.nilai) === 100 && Object.keys(us).length === 0) isDone = true;
+                if (isDone) doneCount++;
+            });
+            var nilai = lap ? lap.nilai : (sesiList.length > 0 ? Math.round((doneCount / sesiList.length) * 100) : 0);
+
+            sesiList.forEach(function(s, idx) {
+                var isDone = !!us[idx];
+                if (!isDone && lap && Number(lap.nilai) === 100 && Object.keys(us).length === 0) {
+                    isDone = true;
+                }
+
+                // Filter status sesi
+                if (filterStatus === 'done' && !isDone) return;
+                if (filterStatus === 'pending' && isDone) return;
+
+                var sNomor = idx + 1;
+                var sJudul = s.judul || ('Sesi ' + sNomor);
+
+                // Filter pencarian
+                var searchTarget = (nama + ' ' + nup + ' ' + unit + ' ' + role + ' ' + mJudul + ' ' + sJudul + ' sesi ' + sNomor).toLowerCase();
+                if (q && !searchTarget.includes(q)) return;
+
+                sessionRows.push({
+                    mid: mid,
+                    nup: nup,
+                    nama: nama,
+                    unit: unit,
+                    role: role,
+                    mJudul: mJudul,
+                    sesiIdx: idx,
+                    sesiNomor: sNomor,
+                    sesiJudul: sJudul,
+                    sesiLink: s.link || '',
+                    isDone: isDone,
+                    nilai: nilai,
+                    doneCount: doneCount,
+                    totalSesi: sesiList.length
+                });
+            });
+        });
+
+        if (!sessionRows.length) {
+            tb.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-slate-400 font-semibold">Tidak ada sesi peserta yang sesuai dengan filter pencarian.</td></tr>';
+            if (counterLabel) counterLabel.textContent = '0 data sesi ditampilkan';
+            return;
+        }
+
+        sessionRows.sort(function(a, b) {
+            if (a.mJudul !== b.mJudul) return a.mJudul.localeCompare(b.mJudul);
+            if (a.nama !== b.nama) return a.nama.localeCompare(b.nama);
+            return a.sesiNomor - b.sesiNomor;
+        });
+
+        if (counterLabel) counterLabel.textContent = sessionRows.length + ' data sesi pembelajaran ditampilkan';
+
+        tb.innerHTML = sessionRows.map(function(r) {
+            var roleCls = r.role === 'reguler' ? 'badge-reguler' : (r.role === 'sdp' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'badge-umum');
+            var statusBadge = r.isDone
+                ? '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-2xs"><i class="fas fa-check-circle text-emerald-600"></i> Selesai</span>'
+                : '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase bg-slate-100 text-slate-500 border border-slate-200"><i class="far fa-circle text-slate-400 text-[9px]"></i> Belum Selesai</span>';
+
+            var linkBtn = r.sesiLink
+                ? '<a href="' + r.sesiLink + '" target="_blank" class="text-[10px] text-indigo-600 hover:text-indigo-800 font-semibold inline-flex items-center gap-1 mt-0.5"><i class="fas fa-external-link-alt text-[9px]"></i> Buka Materi</a>'
+                : '';
+
+            return '<tr class="hover:bg-slate-50/80 transition-colors">' +
+                '<td class="p-3 font-bold text-slate-900 whitespace-nowrap">' + r.nama + '</td>' +
+                '<td class="p-3 font-mono text-slate-500 whitespace-nowrap">' + r.nup + '</td>' +
+                '<td class="p-3 text-slate-600 whitespace-nowrap">' + r.unit + '</td>' +
+                '<td class="p-3 whitespace-nowrap"><span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ' + roleCls + '">' + (r.role || 'UMUM').toUpperCase() + '</span></td>' +
+                '<td class="p-3 font-bold text-indigo-700 min-w-[200px]">' + r.mJudul + '</td>' +
+                '<td class="p-3 min-w-[220px]">' +
+                    '<div class="flex items-center gap-2">' +
+                        '<span class="w-6 h-6 rounded-lg ' + (r.isDone ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600') + ' font-black flex items-center justify-center text-[11px] flex-shrink-0">' + r.sesiNomor + '</span>' +
+                        '<div><p class="font-bold text-slate-800 text-xs leading-tight">' + r.sesiJudul + '</p>' + linkBtn + '</div>' +
+                    '</div>' +
+                '</td>' +
+                '<td class="p-3 text-center whitespace-nowrap">' +
+                    '<button onclick="toggleSesiStatusTrainer(\'' + r.mid + '\',\'' + r.nup + '\',' + r.sesiIdx + ',' + r.isDone + ')" type="button" class="cursor-pointer group" title="Klik untuk mengubah status sesi ini">' +
+                    statusBadge +
+                    '</button>' +
+                '</td>' +
+                '<td class="p-3 text-center whitespace-nowrap">' +
+                    '<span class="font-black text-sm ' + (r.nilai >= 75 ? 'text-emerald-600' : 'text-amber-600') + '">' + r.nilai + '</span>' +
+                    '<span class="text-[10px] text-slate-400 font-semibold block">' + r.doneCount + '/' + r.totalSesi + ' Sesi</span>' +
+                '</td>' +
+                '<td class="p-3 text-right whitespace-nowrap">' +
+                    '<button onclick="hapusNilai(\'' + r.mid + '\',\'' + r.nup + '\')" class="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors" title="Hapus Data Peserta">' +
+                        '<i class="fas fa-trash-alt text-xs"></i>' +
+                    '</button>' +
+                '</td>' +
+                '</tr>';
+        }).join('');
+
+    } else {
+        // MODE RINGKASAN MATERI (DENGAN DETAIL CHIP SESI)
+        var materiRows = [];
+
+        keys.forEach(function(k) {
+            var item = userMidMap[k];
+            var mid = item.mid;
+            var nup = item.nup;
+            if (filterMateri !== 'all' && mid !== filterMateri) return;
+
+            var m = allMateriData[mid] || {};
+            var mJudul = m.judul || mid;
+            var lap = (allLaporanData[mid] && allLaporanData[mid][nup]) || null;
+            var peg = dbPeg[nup] || {};
+
+            var nama = (lap && lap.nama) || peg.nama || ((allAbsenData[mid] && allAbsenData[mid][nup]) || {}).nama || 'Pegawai ' + nup;
+            var unit = (lap && lap.unit) || peg.unit || ((allAbsenData[mid] && allAbsenData[mid][nup]) || {}).unit || '-';
+            var role = (lap && lap.role) || peg.role || ((allAbsenData[mid] && allAbsenData[mid][nup]) || {}).role || 'umum';
+
+            var sesiList = (Array.isArray(m.sesi) && m.sesi.length > 0) ? m.sesi : [{ judul: mJudul, link: '' }];
+            var us = (m.selesaiSesi && m.selesaiSesi[nup]) || {};
+
+            var sesiDetails = [];
+            var doneCount = 0;
+
+            sesiList.forEach(function(s, idx) {
+                var isDone = !!us[idx];
+                if (!isDone && lap && Number(lap.nilai) === 100 && Object.keys(us).length === 0) {
+                    isDone = true;
+                }
+                if (isDone) doneCount++;
+                sesiDetails.push({
+                    nomor: idx + 1,
+                    judul: s.judul || ('Sesi ' + (idx + 1)),
+                    isDone: isDone
+                });
+            });
+
+            // Filter status
+            if (filterStatus === 'done' && doneCount < sesiList.length) return;
+            if (filterStatus === 'pending' && doneCount === sesiList.length) return;
+
+            // Filter search
+            var sesiTitles = sesiDetails.map(function(s) { return s.judul; }).join(' ');
+            var searchTarget = (nama + ' ' + nup + ' ' + unit + ' ' + role + ' ' + mJudul + ' ' + sesiTitles).toLowerCase();
+            if (q && !searchTarget.includes(q)) return;
+
+            var nilai = lap ? lap.nilai : (sesiList.length > 0 ? Math.round((doneCount / sesiList.length) * 100) : 0);
+
+            materiRows.push({
+                mid: mid,
+                nup: nup,
+                nama: nama,
+                unit: unit,
+                role: role,
+                mJudul: mJudul,
+                totalSesi: sesiList.length,
+                doneCount: doneCount,
+                sesiList: sesiDetails,
+                nilai: nilai
+            });
+        });
+
+        if (!materiRows.length) {
+            tb.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-slate-400 font-semibold">Tidak ada data materi peserta yang sesuai dengan filter pencarian.</td></tr>';
+            if (counterLabel) counterLabel.textContent = '0 data peserta ditampilkan';
+            return;
+        }
+
+        materiRows.sort(function(a, b) {
+            if (a.mJudul !== b.mJudul) return a.mJudul.localeCompare(b.mJudul);
+            return a.nama.localeCompare(b.nama);
+        });
+
+        if (counterLabel) counterLabel.textContent = materiRows.length + ' data peserta materi ditampilkan';
+
+        tb.innerHTML = materiRows.map(function(r) {
+            var roleCls = r.role === 'reguler' ? 'badge-reguler' : (r.role === 'sdp' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'badge-umum');
+            var chips = r.sesiList.map(function(s) {
+                if (s.isDone) {
+                    return '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200" title="' + s.judul + ' (Selesai)"><i class="fas fa-check text-emerald-600 text-[9px]"></i> Sesi ' + s.nomor + ': ' + s.judul + '</span>';
+                } else {
+                    return '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200" title="' + s.judul + ' (Belum Selesai)"><i class="far fa-circle text-slate-400 text-[8px]"></i> Sesi ' + s.nomor + ': ' + s.judul + '</span>';
+                }
+            }).join(' ');
+
+            return '<tr class="hover:bg-slate-50/80 transition-colors">' +
+                '<td class="p-3 font-bold text-slate-900 whitespace-nowrap">' + r.nama + '</td>' +
+                '<td class="p-3 font-mono text-slate-500 whitespace-nowrap">' + r.nup + '</td>' +
+                '<td class="p-3 text-slate-600 whitespace-nowrap">' + r.unit + '</td>' +
+                '<td class="p-3 whitespace-nowrap"><span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ' + roleCls + '">' + (r.role || 'UMUM').toUpperCase() + '</span></td>' +
+                '<td class="p-3 min-w-[260px]">' +
+                    '<div class="font-bold text-indigo-700 text-xs mb-1.5">' + r.mJudul + '</div>' +
+                    '<div class="flex flex-wrap gap-1">' + chips + '</div>' +
+                '</td>' +
+                '<td class="p-3 text-center whitespace-nowrap">' +
+                    '<span class="inline-block px-2.5 py-1 rounded-full text-[10px] font-black uppercase ' + (r.doneCount === r.totalSesi ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-amber-100 text-amber-800 border border-amber-200') + '">' +
+                        r.doneCount + '/' + r.totalSesi + ' Sesi (' + Math.round((r.doneCount/r.totalSesi)*100) + '%)' +
+                    '</span>' +
+                '</td>' +
+                '<td class="p-3 text-center whitespace-nowrap">' +
+                    '<span class="font-black text-sm ' + (r.nilai >= 75 ? 'text-emerald-600' : 'text-amber-600') + '">' + r.nilai + '</span>' +
+                '</td>' +
+                '<td class="p-3 text-right whitespace-nowrap">' +
+                    '<button onclick="hapusNilai(\'' + r.mid + '\',\'' + r.nup + '\')" class="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors" title="Hapus Data Peserta">' +
+                        '<i class="fas fa-trash-alt text-xs"></i>' +
+                    '</button>' +
+                '</td>' +
+                '</tr>';
+        }).join('');
+    }
 }
 
 function hapusNilai(mid, nup) {
-    if (!confirm('Hapus nilai peserta ini?')) return;
-    db.ref('laporan/' + mid + '/' + nup).remove().then(function() {
-        toast('Nilai dihapus.', 'info');
+    if (!confirm('Hapus data nilai dan riwayat sesi peserta ini?')) return;
+    var p1 = db.ref('laporan/' + mid + '/' + nup).remove();
+    var p2 = db.ref('materi/' + mid + '/selesaiSesi/' + nup).remove();
+    Promise.all([p1, p2]).then(function() {
+        toast('Data nilai & riwayat sesi peserta dihapus.', 'info');
         renderNilai();
     });
 }
@@ -3525,19 +3884,94 @@ function downloadExcel() {
 }
 
 function downloadExcelNilai() {
-    var rs = [];
-    Object.keys(allLaporanData).forEach(function(mid) {
-        var mj = (allMateriData[mid] || {}).judul || mid;
-        Object.keys(allLaporanData[mid]).forEach(function(nup) {
-            var d = allLaporanData[mid][nup];
-            rs.push({ Nama: d.nama, NUP: d.nup, Unit: d.unit, Kategori: d.role, Materi: mj, Nilai: d.nilai, Waktu: d.waktu ? new Date(d.waktu).toLocaleString('id-ID') : '-' });
+    var dbPeg = window.databasePegawai || {};
+    var userMidMap = {};
+
+    Object.keys(allLaporanData || {}).forEach(function(mid) {
+        Object.keys(allLaporanData[mid] || {}).forEach(function(nup) {
+            userMidMap[mid + '___' + nup] = { mid: mid, nup: nup };
         });
     });
-    if (!rs.length) { toast('Tidak ada data nilai.', 'warn'); return; }
-    var ws = XLSX.utils.json_to_sheet(rs), wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Nilai');
-    XLSX.writeFile(wb, 'Nilai_BKI_Classroom.xlsx');
-    toast('Excel Nilai diunduh!', 'success');
+
+    Object.keys(allMateriData || {}).forEach(function(mid) {
+        var m = allMateriData[mid];
+        if (m && m.selesaiSesi) {
+            Object.keys(m.selesaiSesi).forEach(function(nup) {
+                userMidMap[mid + '___' + nup] = { mid: mid, nup: nup };
+            });
+        }
+    });
+
+    var keys = Object.keys(userMidMap);
+    if (!keys.length) { toast('Tidak ada data nilai atau sesi peserta.', 'warn'); return; }
+
+    var rsSesi = [];
+    var rsMateri = [];
+
+    keys.forEach(function(k) {
+        var item = userMidMap[k];
+        var mid = item.mid;
+        var nup = item.nup;
+        var m = allMateriData[mid] || {};
+        var mJudul = m.judul || mid;
+        var lap = (allLaporanData[mid] && allLaporanData[mid][nup]) || null;
+        var peg = dbPeg[nup] || {};
+
+        var nama = (lap && lap.nama) || peg.nama || ((allAbsenData[mid] && allAbsenData[mid][nup]) || {}).nama || 'Pegawai ' + nup;
+        var unit = (lap && lap.unit) || peg.unit || ((allAbsenData[mid] && allAbsenData[mid][nup]) || {}).unit || '-';
+        var role = (lap && lap.role) || peg.role || ((allAbsenData[mid] && allAbsenData[mid][nup]) || {}).role || 'umum';
+        var waktuStr = (lap && lap.waktu) ? new Date(lap.waktu).toLocaleString('id-ID') : '-';
+
+        var sesiList = (Array.isArray(m.sesi) && m.sesi.length > 0) ? m.sesi : [{ judul: mJudul, link: '' }];
+        var us = (m.selesaiSesi && m.selesaiSesi[nup]) || {};
+
+        var doneCount = 0;
+        var sesiSummary = [];
+
+        sesiList.forEach(function(s, idx) {
+            var isDone = !!us[idx];
+            if (!isDone && lap && Number(lap.nilai) === 100 && Object.keys(us).length === 0) isDone = true;
+            if (isDone) doneCount++;
+
+            var sNomor = idx + 1;
+            var sJudul = s.judul || ('Sesi ' + sNomor);
+            sesiSummary.push('Sesi ' + sNomor + ': ' + sJudul + ' [' + (isDone ? 'Selesai' : 'Belum Selesai') + ']');
+
+            rsSesi.push({
+                'Nama Pegawai': nama,
+                'NUP': nup,
+                'Unit': unit,
+                'Kategori': role.toUpperCase(),
+                'Materi': mJudul,
+                'Sesi Ke': sNomor,
+                'Judul Sesi': sJudul,
+                'Status Sesi': isDone ? 'Selesai' : 'Belum Selesai',
+                'Nilai / Progres': lap ? lap.nilai : Math.round((doneCount / sesiList.length) * 100),
+                'Waktu Laporan': waktuStr
+            });
+        });
+
+        rsMateri.push({
+            'Nama Pegawai': nama,
+            'NUP': nup,
+            'Unit': unit,
+            'Kategori': role.toUpperCase(),
+            'Materi': mJudul,
+            'Rincian Status Sesi': sesiSummary.join('; '),
+            'Total Selesai': doneCount + '/' + sesiList.length + ' Sesi',
+            'Progres': Math.round((doneCount / sesiList.length) * 100) + '%',
+            'Nilai': lap ? lap.nilai : Math.round((doneCount / sesiList.length) * 100),
+            'Waktu Laporan': waktuStr
+        });
+    });
+
+    var wb = XLSX.utils.book_new();
+    var wsSesi = XLSX.utils.json_to_sheet(rsSesi);
+    var wsMateri = XLSX.utils.json_to_sheet(rsMateri);
+    XLSX.utils.book_append_sheet(wb, wsSesi, 'Rekap Per Sesi');
+    XLSX.utils.book_append_sheet(wb, wsMateri, 'Ringkasan Nilai');
+    XLSX.writeFile(wb, 'Rekap_Nilai_dan_Sesi_BKI_Classroom.xlsx');
+    toast('Excel Rekap Nilai & Sesi berhasil diunduh!', 'success');
 }
 
 function downloadExcelWaktu() {
@@ -3584,7 +4018,10 @@ function loadAllFirebaseData() {
         renderSidebar();
         if (currentView === 'home') renderHomeView();
         if (currentView === 'folder') renderFolderView(currentFolderName);
-        if (currentView === 'admin') renderAdminMateri();
+        if (currentView === 'admin') {
+            renderAdminMateri();
+            renderNilai();
+        }
         if (currentView === 'learning' && curId && allMateriData[curId]) {
             renderSesiLearning(allMateriData[curId]);
         }
